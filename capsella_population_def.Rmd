@@ -1,0 +1,499 @@
+---
+title: "Capsella rubella introgression to Capsella bursa-pastoris populations"
+author: "Maya Wilson Brown"
+date: "2024-02-20"
+output: html_document
+---
+```{r}
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(dplyr)
+library(tidygeocoder) # for grabbing lat and long from city names
+library(rnaturalearth) # for maps
+#library(forcats) # do I actually use this package for anything?
+```
+
+I have written functions for the plots I want and selecting K.
+We can source the functions from capsella_pop_introgression_functions.R
+```{r}
+source("~/Documents/PhD/Research/capsella_introgression/capsella_pop_introgressin_functions.R")
+```
+
+```{r directory variables}
+# all Capsella bursa-pastoris in vcf file
+admix_dir = "~/Documents/PhD/Research/admixture/all_cbp"
+
+# only Cbp in Pop3 when k=3 in all CBP admixture result (generally northern europe and NYC)
+eu_admix_dir = "~/Documents/PhD/Research/admixture/european/"
+
+# only ancestral range of CBP in Eurasia
+eurasian_dir = "~/Documents/PhD/Research/admixture/eurasian/"
+
+# nyc pops conditional on Eurasian clusters
+conditional_dir = "~/Documents/PhD/Research/admixture/nyc_eurasian_conditional/"
+```
+
+```{r capsella sequenced information}
+wgs <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_combined_wgs_v2.txt", sep = "\t", header = T)
+```
+
+# Capsella population admixture results and cluster assignment
+Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
+
+Load in the ADMIXTURE output data
+
+```{r import admixture output files}
+# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
+cap_fam <- read.delim(paste0(admix_dir, "plink2_pruned_cbp.fam"), header=FALSE)
+
+# read in Cross Validation (cv) error log
+cap_cv <- read.delim(paste0(admix_dir, "cv_error.log"), header = FALSE, sep = ":")
+
+# list the files in admixture directory matching suffix pattern
+#tbl <- list.files(path = admix_dir, pattern = "*.P") # .P files are allele frequencies of inferred ancestral populations; commented out because I do not use these files
+lst <- list.files(path = admix_dir, pattern = "*.Q") # Q files are ancestry fractions for each sample
+
+cap_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
+#loop to load sample data
+for (file in lst) {
+  file_path <- file.path(admix_dir, file)  # Get the full file path
+  cap_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
+}         
+```
+
+
+Cross validation of lowest error K groups
+```{r CV validation of all Capsella bursa-pastoris}
+K = selectK(cap_cv)
+print(K)
+```
+
+
+```{r}
+# make ancestry bars plot
+cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, cap_fam, scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
+
+# plot
+cap_k3
+# save image
+#ggsave("./plots_temp/cbp_k3.png", width = 13, height = 7, units = "in")
+```
+
+
+Figuring out exactly who is in each group and where they are from.
+```{r eval=FALSE}
+# just left in for quick referencing
+# When K=3
+k3_1 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop1"),]
+# Taiwan, South East and North East China
+
+k3_2 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop2"),]
+# germany, poland, netherlands, iceland, sweden russia, NW China, NE France near Germany, near Scotland, SW France
+
+k3_3 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop3"),] #Italy Spain, Greece, Jordan, Algeria, Turkey
+```
+
+```{r location data for Capsella clusters}
+# combine with location information
+cap_k3_anc_info <- ancestry_location(cap_k3$data, wgs)
+
+# get sample name to k group key
+cap_k3_key <- assign_ancestry(cap_ancestry_propsK, 3, cap_fam)
+
+# combine key with location data
+cap_k3 <- left_join(cap_k3_anc_info, cap_k3_key)
+```
+
+Clusters on a map
+```{r all Capsella maps}
+world + geom_point(data=cap_k3, aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21) +
+  scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1"))
+
+#ggsave("./plots_temp/cbp_k3_map.png", width = 13, height = 7, units = "in")
+```
+
+# European Only admixture
+We are interested in how the Admixture group containing genotypes from northern Europe compare to NYC. I ran another admixture analysis only including individuals that have 60% or more ancestry proportion belonging to Population 3 when K=3 (Red individuals above).
+
+```{r import admixture output files}
+# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
+eu_fam <- read.delim(paste0(eu_admix_dir, "plink2_pruned_cbp.fam"), header=FALSE)
+
+# read in Cross Validation (cv) error log
+eu_cv <- read.delim(paste0(eu_admix_dir, "cv_error.log"), header = FALSE, sep = ":")
+
+# list the files in admixture directory matching suffix pattern
+#tbl <- list.files(path = admix_dir, pattern = "*.P") # .P files are allele frequencies of inferred ancestral populations; commented out because I do not use these files
+lst <- list.files(path = eu_admix_dir, pattern = "*.Q") # Q files are ancestry fractions for each sample
+
+eu_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
+#loop to load sample data
+for (file in lst) {
+  file_path <- file.path(eu_admix_dir, file)  # Get the full file path
+  eu_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
+}         
+```
+
+```{r}
+# plot cv error rate scatter and save selected K to K
+K = selectK(eu_cv)
+```
+
+Variation between the CV error rates in incredibly small here, so there may be some merit to any of the K values above 2. However, K here is selected.
+
+I will look at a ploot of all the K groupings together.
+```{r}
+# ancestry bars for only those in European (red) group above
+eu_k2 <- ancestry_bars(eu_ancestry_propsK, K = K, sample_names_fam = eu_fam)
+
+# make just the plot show up
+plot(eu_k2)
+
+# save plot
+#ggsave("./plots_temp/eu_cbp_k2.png", width = 13, height = 7, units = "in")
+```
+
+
+A majority of the NYC samples are groups together within the same population.
+```{r, eval=FALSE}
+# print locations for "non-admixed" samples of each population
+
+#Eurasia
+eu_k2_anc[eu_k2_anc$ancestry == "pop2" & eu_k2_anc$proportion > 0.8,]
+
+# NYC
+eu_k2_anc[eu_k2_anc$ancestry == "pop1" & eu_k2_anc$proportion > 0.8,]
+```
+
+###### Ancestry maps
+
+```{r}
+# save the ancestry data
+eu_k2_anc_info <- ancestry_location(eu_k2$data, wgs)
+```
+
+### Map Time!
+
+Color by ancestry proportion
+
+Assigning ancestry by k groups
+
+```{r}
+# get sample to majority ancestry population key
+k2_key <- assign_ancestry(eu_ancestry_propsK, K=2, eu_fam)
+
+# join key to location information
+eu_k2 <- left_join(eu_k2_anc_info, k2_key)
+```
+
+Color by ancestry group.
+
+REMEBER WHEN PLOTTING, THE POPULATIONS DO NOT MATCH BETWEEN Ks!!!!! IT'S AN ARBITRARY NAME FOR A CLUSTER. POP1 WHEN K=4 IS NOT THE SAME AS POP1 WHEN K=2.
+
+```{r}
+ny_map + geom_point(data=subset(eu_k2, state == c("NY", "NJ")), aes(x=longitude, y=latitude, fill = anc_group), shape = 21)
+
+#ggsave("./plots_temp/eu_cbp_k2_ny_map.png", width = 13, height = 7, units = "in")
+```
+```{r}
+eurasia + geom_point(data=subset(eu_k2, citation != "R. Panko"), aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21)
+
+#ggsave("./plots_temp/eu_cbp_k2_eurasia_map.png", width = 13, height = 7, units = "in")
+```
+
+Get data for K=4 and plot on maps
+```{r}
+# data for k = 4 on European group data
+eu_k4 <- ancestry_bars(eu_ancestry_propsK, K = 4, sample_names_fam = eu_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#2B3A67", "pop2" = "#84A98C", "pop3" = "#DA2C38", "pop4" = "#FFC482")))
+
+# make just the plot show up
+plot(eu_k4)
+
+#ggsave("./plots_temp/eu_cbp_k4.png", width = 13, height = 7, units = "in")
+```
+
+
+```{r}
+# k=4 data prep
+eu_k4_anc_info <- ancestry_location(eu_k4$data, wgs)
+
+# get sample to majority ancestry population key
+k4_key <- assign_ancestry(eu_ancestry_propsK, K=4, eu_fam)
+
+# join key to location information
+eu_k4 <- left_join(eu_k4_anc_info, k4_key)
+```
+
+```{r}
+# new york map
+ny_map + geom_point(data=subset(eu_k4, state == c("NY", "NJ")), aes(x=longitude, y=latitude, fill = anc_group), shape=21, stroke = 2) +
+  scale_fill_manual(values = c("pop1" = "#2B3A67", "pop2" = "#84A98C", "pop3" = "#DA2C38", "pop4" = "#FFC482"))
+
+#ggsave("./plots_temp/eu_cbp_k4_ny_map.png", width = 13, height = 7, units = "in")
+```
+
+```{r}
+# world map
+eurasia + geom_point(data=subset(eu_k4, citation != "R. Panko"), aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21) +
+  scale_fill_manual(values = c("pop1" = "#2B3A67", "pop2" = "#84A98C", "pop3" = "#DA2C38", "pop4" = "#FFC482"))
+
+#ggsave("./plots_temp/eu_cbp_k4_eurasia_map.png", width = 13, height = 7, units = "in")
+```
+From the above plots, we can see that population 4 when k=4 is a population "unique" to New York.
+
+```{r pop4 when k is 4 in the European Group}
+# confirming all population 4 individuals come from NYC
+unique(eu_k4[eu_k4$anc_group == "pop4", "citation"])
+```
+
+#### ADMIXTURE conditioned on K
+
+If we just think about ADMIXTURE and STRUCTURE as ways to select a valuable K number of ancestral groups, it makes sense to run admixture on the Eurasian C. bursa-pastoris samples on their own, and select the best K groups from the ancestral population. Then, using that K, I would run ADMIXTURE on only the NYC populations and assign the NYC population to those K ancestral groups. I am not sure of the best way to match between the populations, but I may just have to look at the allele frequencies in the inferred ancestral populations and match them that way.
+
+I do feel that is analysis has already been done by Kryvohkhyzha and colleagues to some capacity.
+
+```{r import admixture output files}
+# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
+ea_fam <- read.delim(paste0(eurasian_dir, "eurasian_cbp.fam"), header=FALSE)
+
+# read in Cross Validation (cv) error log
+ea_cv <- read.delim(paste0(eurasian_dir, "eurasian_cv_error.log"), header = FALSE, sep = ":")
+
+# list the files in admixture directory matching suffix pattern
+#tbl <- list.files(path = admix_dir, pattern = "*.P") # .P files are allele frequencies of inferred ancestral populations; commented out because I do not use these files
+lst <- list.files(path = eurasian_dir, pattern = "*.Q") # Q files are ancestry fractions for each sample
+
+ea_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
+#loop to load sample data
+for (file in lst) {
+  file_path <- file.path(eurasian_dir, file)  # Get the full file path
+  ea_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
+}         
+```
+
+```{r}
+# plot cv error rate scatter and save selected K to K
+K = selectK(ea_cv)
+```
+K = four would also be valid to look at.
+
+```{r}
+# data for k = 4 on European group data
+ea_k2 <- ancestry_bars(ea_ancestry_propsK, K = K, sample_names_fam = ea_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange")))
+
+# make just the plot show up
+plot(ea_k2)
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/eurasian_cbp_k2.png", width = 13, height = 7, units = "in")
+```
+
+Same information largely, but on a map (just to confirm my suspicions).
+```{r}
+# k=4 data prep
+ea_k2_anc_info <- ancestry_location(ea_k2$data, wgs)
+
+# get sample to majority ancestry population key
+k2_key <- assign_ancestry(ea_ancestry_propsK, K=2, list_element = 2, ea_fam)
+
+# join key to location information
+ea_k2 <- left_join(ea_k2_anc_info, k2_key)
+```
+
+```{r}
+# world map
+eurasia + geom_point(data=ea_k2, aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21, size = 7) +
+  scale_fill_manual(name = "Group", values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"), labels = c("East Asian", "European"))
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/eurasian_cbp_k2_eurasia_map_bigDots.png", width = 13, height = 7, units = "in")
+```
+Suspicions confirmed: there are two main populations in the ancestral range; one is in southern and eastern Asia, while the other is mostly in Europe and northwestern China with some overlap.
+
+Given the original population structure inferred at the very top of this document, this suggests a few things: 
+- 2 populations / ancestry groups are most likely. The reason k=3 and k=4 show lower cross validation error rates is probably due to the European, northwestern Chinese cluster being overwhelmed by the number of New York individuals and *their* allele frequencies
+- The European/ northwestern Chinese cluster at the top of the document appears largely admixed with a Mediterranean-like cluster. Again, that is probably not real population structure, but due to the New York City samples overwhelming the allele frequency patterns. Therefore, I suspect that there has been a mild bottleneck from the European population into New York and New Jersey.
+
+K = 4 just out of curiosity
+
+```{r}
+# data for k = 4 on European group data
+ea_k4 <- ancestry_bars(ea_ancestry_propsK, K = 4, sample_names_fam = ea_fam, ggplot_opt = scale_fill_manual(values = c("pop3" = "#2B3A67", "pop2" = "#84A98C", "pop1" = "#DA2C38", "pop4" = "#FFC482")))
+
+# make just the plot show up
+plot(ea_k4)
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/eurasian_cbp_k4.png", width = 13, height = 7, units = "in")
+```
+We only know where one of the seemingly admixed genotypes above is from; STJ2 was collected near a canal on La Teste-de-Bush in the south of France.
+
+setting up for plotting on a map
+```{r}
+# k=4 data prep
+ea_k4_anc_info <- ancestry_location(ea_k4$data, wgs)
+
+# get sample to majority ancestry population key
+k4_key <- assign_ancestry(ea_ancestry_propsK, K=4, list_element = 4, ea_fam)
+
+# join key to location information
+ea_k4 <- left_join(ea_k4_anc_info, k4_key)
+```
+
+```{r}
+# world map
+eurasia + geom_point(data=ea_k4, aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21, size = 7) + scale_fill_manual(name = "Group", values = c("pop3" = "#2B3A67", "pop2" = "#84A98C", "pop1" = "#DA2C38", "pop4" = "#FFC482"), labels = c("Mediterranean", "N. European","East Asian", "Central"))
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/eurasian_cbp_k4_eurasia_map_bigDots.png", width = 13, height = 7, units = "in")
+```
+Now we see the Mediterranean cluster sort of break off into two other population chunks.
+
+The next step would be assigning the NYC populations to these "old world" clusters. I did not know ADMIXTURE had this capability but it does!
+
+Just need to make sure the same set of SNPs is in each dataset (old world and NYC)
+
+From the **Projection analysis** section of the ADMIXTURE manual:
+> ADMIXTURE now allows loading of learned allele frequencies from the .P files. For two
+datasets with the same set of SNPs, clusters can be learned using the unsupervised mode
+of ADMIXTURE on the first dataset; subsequently, the learned clusters and ancestry
+proportions from the first dataset can be provided as input used to project the second
+dataset with the -P option.
+Example: Suppose reference.bed is the PLINK binary file containing reference panels
+and study.bed is the PLINK binary file containing study samples. The following sequence
+of commands can be used to learn population structure from the reference panel and project
+the study individuals on it:
+# Verify the two datasets have the same set of SNPs
+% diff -s reference.bim study.bim
+# Run unsupervised ADMIXTURE with K=2
+% admixture reference.bed 2
+# Use learned allele frequencies as (fixed) input to next step
+% cp reference.2.P study.2.P.in
+# Run projection ADMIXTURE with K=2
+% admixture -P study.bed 2
+
+>The projection approach is particularly useful when the study sample is much larger than
+the reference panel. When the study sample is comparable in size to the reference panel,
+it may be preferable to run unsupervised ADMIXTURE on the combined set since the
+running time scales linearly with the number of samples.
+
+>The same approach can also be used for inferring ancestry on a set of related individuals.
+Pedigree information or existing methods such as PLINK [5], KING [6] or PRIMUS [7] can
+be used to identify the largest subset of unrelated individuals in the dataset. ADMIXTURE
+is then run unsupervised on the largest set of unrelated individuals (using that as the
+reference set in the example above). The rest of the individuals (who can be related to the
+reference set) can then be projected on the resulting population structure.
+
+So that is pretty useful.
+
+###### Plot results of projected admixtures
+```{r load projection files}
+# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
+nyc_fam <- read.delim(paste0(conditional_dir, "nyc_pruned_cbp.fam"), header=FALSE)
+
+# list the files in admixture directory matching suffix pattern
+lst <- list.files(path = conditional_dir, pattern = "nyc_pruned_cbp.*.Q") # Q files are ancestry fractions for each sample
+
+nyc_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
+#loop to load sample data
+for (file in lst) {
+  file_path <- file.path(conditional_dir, file)  # Get the full file path
+  nyc_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
+}  
+```
+
+```{r}
+# ancestry bar plots
+nyc_k2 <- ancestry_bars(nyc_ancestry_propsK, K = 2, list_element = 1, nyc_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange")))
+
+# plot
+plot(nyc_k2)
+
+# save
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/nyc_cbp_k2.png", width = 13, height = 7, units = "in")
+```
+AAAANNNNNDDD on the map of New York and New Jersey
+```{r}
+# add location information, even though the NYC samples have them
+# make new column with the trailing S[number] removed from Panko samples
+nyc_k2$data$sample_name <- str_remove_all(nyc_k2$data$vcf_sample_name, "_S[0-9]+")
+
+# combine the sample info with ancestry
+nyc_k2$data <- left_join(nyc_k2$data, wgs)
+
+# get sample to majority ancestry population key
+ny_k2_key <- assign_ancestry(nyc_ancestry_propsK, K=2, list_element = 1, nyc_fam)
+
+# join key to location information
+nyc_k2 <- left_join(nyc_k2$data, ny_k2_key)
+
+# map
+ny_map + geom_point(data=subset(nyc_k2, state == c("NY", "NJ")), aes(x=longitude, y=latitude, fill = anc_group), shape = 21, size = 7) + scale_fill_manual(name = "Group", values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"), labels = c("European"))
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/nyc_cbp_k2_nyc_map_bigDots.png", width = 13, height = 7, units = "in")
+```
+
+Now when looking at K = 4...
+
+```{r}
+# ancestry bar plots
+nyc_k4 <- ancestry_bars(nyc_ancestry_propsK, K = 4, list_element = 2, nyc_fam, ggplot_opt = scale_fill_manual(values = c("pop3" = "#2B3A67", "pop2" = "#84A98C", "pop1" = "#DA2C38", "pop4" = "#FFC482")))
+
+# plot
+plot(nyc_k4)
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/nyc_cbp_k4.png", width = 13, height = 7, units = "in")
+```
+
+```{r}
+# add location information, even though the NYC samples have them
+# make new column with the trailing S[number] removed from Panko samples
+nyc_k4$data$sample_name <- str_remove_all(nyc_k4$data$vcf_sample_name, "_S[0-9]+")
+
+# combine the sample info with ancestry
+nyc_k4$data <- left_join(nyc_k4$data, wgs)
+
+# get sample to majority ancestry population key
+ny_k4_key <- assign_ancestry(nyc_ancestry_propsK, K=4, list_element = 2, nyc_fam)
+
+# join key to location information
+nyc_k4 <- left_join(nyc_k4$data, ny_k4_key)
+
+# map
+ny_map + geom_point(data=subset(nyc_k4, state == c("NY", "NJ")), aes(x=longitude, y=latitude, fill = anc_group), shape = 21, size = 7) + scale_fill_manual(name = "Group", values = c("pop3" = "#2B3A67", "pop2" = "#84A98C", "pop1" = "#DA2C38", "pop4" = "#FFC482"), labels = c("N. European"))
+
+#ggsave("~/Documents/PhD/Research/admixture/plots_temp/nyc_cbp_k4_nyc_map_bigDots.png", width = 13, height = 7, units = "in")
+```
+
+At this point, it makes sense to generate a key for generalized population structure to use in other analyses.
+Specifically, I am going to use these population groups in the PIXY analyses, and other explorations of comparisons between the populations at the local genomic scale.
+
+Here, I just plan to combine the population keys generated above. I consider the conditional analysis to reflect the truest and most parsable population structure.
+
+```{r cbp population file generation}
+# combine eurasian samples with NYC for each usable value of K.
+K2_cond_key <- rbind(k2_key, ny_k2_key)
+K4_cond_key <- rbind(k4_key, ny_k4_key)
+
+# add new column to make the population identifiers descriptive
+K2_cond_key <- K2_cond_key %>%
+  mutate(k2_group = case_when(anc_group == "pop1" ~ "east_asian", 
+                               anc_group == "pop2" ~ "european",
+                               ))
+K4_cond_key <- K4_cond_key %>%
+  mutate(k4_group = case_when(anc_group == "pop1" ~ "mediterranean",
+                              anc_group == "pop2" ~ "n_european",
+                              anc_group == "pop3" ~ "east_asian",
+                              anc_group == "pop4" ~ "central",
+                               ))
+
+# combine both K =2 and K =4 into single data set; leaving out the anc_group column
+cbp_pops <- left_join(K2_cond_key[,-2], K4_cond_key[,-2], )
+
+# ALT: For separating out NYC; row 60 and below are nyc
+#copy column to new column
+cbp_pops$nyc2k4 <- cbp_pops$k4_group
+#change NYC samples to be NYC
+cbp_pops$nyc2k4[60:nrow(cbp_pops)] <- "nyc"
+```
+Now I will write the data population data to file
+```{r save cbp population file, eval=FALSE}
+write.table(cbp_pops, file = "~/Documents/PhD/Research/capsella_introgression/pixy_pop_march26_2024.txt", col.names = F, row.names = F, quote = F, sep = "\t")
+```
