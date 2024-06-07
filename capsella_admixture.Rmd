@@ -81,6 +81,9 @@ sum(full_info$simplified_name == full_info$sample_name) == nrow(full_info)
 # cool, I will make simplified name into sample name
 full_info <- full_info[-16] #drop last column (sample_name)
 colnames(full_info)[which(colnames(full_info) == "simplified_name")] <- "sample_name" #change the same of simplified_name to sample_name
+
+# change first column name
+colnames(full_info)[1] <- "vcf_sample_name"
 ```
 
 
@@ -93,7 +96,7 @@ cbp <- full_info[full_info$species == "Capsella bursa-pastoris",]
 Finally, write to table for use on HPCC.
 ```{r all Capsella bursa-pastoris in VCF}
 #write C. bursa-pastoris VCF names to list
-write.table(cbp$V1, "~/Downloads/vcf_cbp_only_0606_2024.txt", quote = F, sep = "\t", row.names = F, col.names = F)
+write.table(cbp$vcf_sample_name, "~/Downloads/vcf_cbp_only_0606_2024.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 ```
 
 I want do redo the admixture analysis with only samples in the European group (which precipitates out of the admixture analysis with all the *Capsella bursa-pastoris* above)

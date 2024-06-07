@@ -22,21 +22,46 @@ source("~/Documents/PhD/Research/capsella_introgression/capsella_pop_introgressi
 
 ```{r directory variables}
 # all Capsella bursa-pastoris in vcf file
-admix_dir = "~/Documents/PhD/Research/admixture/all_cbp"
+admix_dir = "~/Documents/PhD/Research/capsella_population_structure/all_cbp/"
 
 # only Cbp in Pop3 when k=3 in all CBP admixture result (generally northern europe and NYC)
-eu_admix_dir = "~/Documents/PhD/Research/admixture/european/"
+eu_admix_dir = "~/Documents/PhD/Research/capsella_population_structure/european"
 
 # only ancestral range of CBP in Eurasia
-eurasian_dir = "~/Documents/PhD/Research/admixture/eurasian/"
+eurasian_dir = "~/Documents/PhD/Research/capsella_population_structure/eurasian/"
 
 # nyc pops conditional on Eurasian clusters
-conditional_dir = "~/Documents/PhD/Research/admixture/nyc_eurasian_conditional/"
+conditional_dir = "~/Documents/PhD/Research/capsella_population_structure/nyc_eurasian_conditional/"
 ```
 
 ```{r capsella sequenced information}
-wgs <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_combined_wgs_v2.txt", sep = "\t", header = T)
+#wgs <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_combined_wgs_v2.txt", sep = "\t", header = T)
+
+vcf_dat <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
+# Capsella bursa-pastoris Principle Components
+```{r}
+# read in eigenvec and eigenval data
+vec <- read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp/all_cbp.eigenvec", sep = "\t", header = T) #values on each PC
+
+val <-  read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp/all_cbp.eigenval", sep = "\t", header = F) #PC variances explained
+```
+
+```{r}
+# match individual IDs to informative data
+pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+```
+
+```{r}
+# rough plot
+pc_plot <- ggplot() + 
+  geom_point(data=pc_info, aes(x=PC1, y=PC2,color = citation)) + theme(legend.position = "bottom") #+ geom_text(label = sample_name, color = "black", nudge_y = .5)
+```
+
+```{r}
+pc_plot
+```
+The above PCA incudes Capsella bursa-pastoris from an F2 mapping population that is probably influencing a lot of the variation along PC1 and PC2 here.
 
 # Capsella population admixture results and cluster assignment
 Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
@@ -45,10 +70,10 @@ Load in the ADMIXTURE output data
 
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-cap_fam <- read.delim(paste0(admix_dir, "plink2_pruned_cbp.fam"), header=FALSE)
+cap_fam <- read.delim(paste0(admix_dir, "all_cbp.fam"), header=FALSE)
 
 # read in Cross Validation (cv) error log
-cap_cv <- read.delim(paste0(admix_dir, "cv_error.log"), header = FALSE, sep = ":")
+cap_cv <- read.delim(paste0(admix_dir, "all_cbp_cv_error.log"), header = FALSE, sep = ":")
 
 # list the files in admixture directory matching suffix pattern
 #tbl <- list.files(path = admix_dir, pattern = "*.P") # .P files are allele frequencies of inferred ancestral populations; commented out because I do not use these files
@@ -62,6 +87,12 @@ for (file in lst) {
 }         
 ```
 
+I only use the fam file for joining with the PLINK2 output, and the vcf names are never that informative to me. So I will add the sample names to the fam data file so I can use it more effectively.
+```{r}
+# join fam with sample names
+cap_info_fam <- left_join(cap_fam[2], vcf_dat, join_by("V2" == "vcf_sample_name"))
+```
+
 
 Cross validation of lowest error K groups
 ```{r CV validation of all Capsella bursa-pastoris}
@@ -72,18 +103,32 @@ print(K)
 
 ```{r}
 # make ancestry bars plot
-cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, cap_fam, scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
-
+#cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
+cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_info_fam)
 # plot
 cap_k3
-# save image
-#ggsave("./plots_temp/cbp_k3.png", width = 13, height = 7, units = "in")
+
 ```
+
+```{r save image}
+# save image
+ggsave("~/Documents/PhD/Research/capsella_population_structure/plots/cbp_k3.png", width = 13, height = 7, units = "in")
+```
+
+There is a very reasonable argument for using k=4 here so lets try it!
+```{r}
+cap_k4 <- ancestry_bars(cap_ancestry_propsK, K = 4,list_element = 4, sample_names_fam=cap_info_fam)
+# plot
+cap_k4
+
+ggsave("~/Documents/PhD/Research/capsella_population_structure/plots/cbp_k4.png", width = 13, height = 7, units = "in")
+```
+
 
 
 Figuring out exactly who is in each group and where they are from.
 ```{r eval=FALSE}
-# just left in for quick referencing
+# just left in for quick referencing; this is generated in cbp_admixture.
 # When K=3
 k3_1 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop1"),]
 # Taiwan, South East and North East China
@@ -96,10 +141,11 @@ k3_3 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop3"
 
 ```{r location data for Capsella clusters}
 # combine with location information
-cap_k3_anc_info <- ancestry_location(cap_k3$data, wgs)
+cap_k3_anc_info <- ancestry_location(cap_k3$data, vcf_dat)
+cap_k3_anc_info <- ancestry_location2(cap_k3$data, full_info)
 
 # get sample name to k group key
-cap_k3_key <- assign_ancestry(cap_ancestry_propsK, 3, cap_fam)
+cap_k3_key <- assign_ancestry(cap_ancestry_propsK, K =3, sample_names_fam = cap_info_fam)
 
 # combine key with location data
 cap_k3 <- left_join(cap_k3_anc_info, cap_k3_key)
