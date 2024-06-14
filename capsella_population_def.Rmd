@@ -50,18 +50,52 @@ val <-  read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp
 ```{r}
 # match individual IDs to informative data
 pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+pc_info$citation2 <- str_split_i(pc_info$citation," ", 1) 
 ```
 
 ```{r}
 # rough plot
-pc_plot <- ggplot() + 
-  geom_point(data=pc_info, aes(x=PC1, y=PC2,color = citation)) + theme(legend.position = "bottom") #+ geom_text(label = sample_name, color = "black", nudge_y = .5)
+pc_plot1 <- ggplot(data=pc_info, aes(x=PC1, y=PC2, label = sample_name)) + 
+  geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 ```
 
 ```{r}
-pc_plot
+pc_plot1
 ```
-The above PCA incudes Capsella bursa-pastoris from an F2 mapping population that is probably influencing a lot of the variation along PC1 and PC2 here.
+I seemingly need to do some more filtering.
+
+Check out the other PCs
+```{r}
+# rough plot
+pc_plot2 <- ggplot(data=pc_info, aes(x=PC1, y=PC3, label = sample_name)) + 
+  geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+
+pc_plot2
+```
+Kind of interested in the way Kryvokhyzha 2016 did it where they looked at the PCs with climate and geographic data.
+```{r}
+# plotting PCs with location data
+pc_plot3 <- ggplot(data=pc_info, aes(x=PC1, y=latitude, label = sample_name)) + 
+  geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+
+pc_plot3
+```
+```{r}
+# plotting PCs with location data
+pc_plot4 <- ggplot(data=pc_info, aes(x=longitude, y=PC1, label = sample_name)) + 
+  geom_point(aes(color = citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+
+pc_plot4
+```
+I do not think these plots necessarily give me any new information.
+```{r}
+# plotting PCs with location data
+pc_plot5 <- ggplot(data=pc_info, aes(x=longitude, y=latitude, label = sample_name)) + 
+  geom_point(aes(color = PC1)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+
+pc_plot5
+```
+
 
 # Capsella population admixture results and cluster assignment
 Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
@@ -96,15 +130,19 @@ cap_info_fam <- left_join(cap_fam[2], vcf_dat, join_by("V2" == "vcf_sample_name"
 
 Cross validation of lowest error K groups
 ```{r CV validation of all Capsella bursa-pastoris}
-K = selectK(cap_cv)
-print(K)
+#K = selectK(cap_cv)
+selectK(cap_cv)
+#print(K)
+
+K = 3
 ```
 
 
 ```{r}
 # make ancestry bars plot
 #cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
-cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_info_fam)
+cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_info_fam, ggplot_opt =
+  scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
 # plot
 cap_k3
 
@@ -121,7 +159,7 @@ cap_k4 <- ancestry_bars(cap_ancestry_propsK, K = 4,list_element = 4, sample_name
 # plot
 cap_k4
 
-ggsave("~/Documents/PhD/Research/capsella_population_structure/plots/cbp_k4.png", width = 13, height = 7, units = "in")
+#ggsave("~/Documents/PhD/Research/capsella_population_structure/plots/cbp_k4.png", width = 13, height = 7, units = "in")
 ```
 
 
@@ -141,8 +179,8 @@ k3_3 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop3"
 
 ```{r location data for Capsella clusters}
 # combine with location information
-cap_k3_anc_info <- ancestry_location(cap_k3$data, vcf_dat)
-cap_k3_anc_info <- ancestry_location2(cap_k3$data, full_info)
+#cap_k3_anc_info <- ancestry_location(cap_k3$data, vcf_dat)
+cap_k3_anc_info <- ancestry_location2(cap_k3$data, vcf_dat)
 
 # get sample name to k group key
 cap_k3_key <- assign_ancestry(cap_ancestry_propsK, K =3, sample_names_fam = cap_info_fam)
@@ -156,7 +194,7 @@ Clusters on a map
 world + geom_point(data=cap_k3, aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21) +
   scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1"))
 
-#ggsave("./plots_temp/cbp_k3_map.png", width = 13, height = 7, units = "in")
+#ggsave("cbp_k3_map.png", width = 13, height = 7, units = "in")
 ```
 
 # European Only admixture
@@ -242,6 +280,7 @@ ny_map + geom_point(data=subset(eu_k2, state == c("NY", "NJ")), aes(x=longitude,
 
 #ggsave("./plots_temp/eu_cbp_k2_ny_map.png", width = 13, height = 7, units = "in")
 ```
+
 ```{r}
 eurasia + geom_point(data=subset(eu_k2, citation != "R. Panko"), aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21)
 
