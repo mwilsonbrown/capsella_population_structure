@@ -21,29 +21,26 @@ source("~/Documents/PhD/Research/capsella_introgression/capsella_pop_def_functio
 ```
 
 ```{r directory variables}
-# all Capsella bursa-pastoris in vcf file
-admix_dir = "~/Documents/PhD/Research/capsella_population_structure/all_cbp/"
-
-# only Cbp in Pop3 when k=3 in all CBP admixture result (generally northern europe and NYC)
-eu_admix_dir = "~/Documents/PhD/Research/capsella_population_structure/european"
-
-# only ancestral range of CBP in Eurasia
-eurasian_dir = "~/Documents/PhD/Research/capsella_population_structure/eurasian/"
-
-# nyc pops conditional on Eurasian clusters
-conditional_dir = "~/Documents/PhD/Research/capsella_population_structure/nyc_eurasian_conditional/"
+# load data directory
+admix_dir <- "~/Documents/PhD/Research/capsella_population_structure/data/"
+temp_plot <- "~/Documents/PhD/Research/capsella_population_structure/temp_plots/"
+plot_dir <- "~/Documents/PhD/Research/capsella_population_structure/plots"
 ```
 
 ```{r capsella sequenced information}
+# load information about samples
 vcf_dat <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
+
+One of the first things I would like to do is back fill locations for data points in the VCF. For example, many from the Douglass paper do not have lat and long, but they have general cities in the notes. I would also like to fill in country names for locations that do have a latitude and longitude.
+
 
 # Capsella bursa-pastoris Principle Components -- All Populations
 ```{r pca eigenstuff}
 # read in eigenvec and eigenval data
-vec <- read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp/all_cbp.eigenvec", sep = "\t", header = T) #values on each PC
+vec <- read.csv(paste0(admix_dir, "all_pruned_cbp.eigenvec"), sep = "\t", header = T) #values on each PC
 
-val <-  read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp/all_cbp.eigenval", sep = "\t", header = F) #PC variances explained
+val <-  read.csv(paste0(admix_dir, "all_pruned_cbp.eigenval"), sep = "\t", header = F) #PC variances explained
 ```
 
 ```{r join pca with meta}
@@ -57,7 +54,7 @@ pc_info$citation2 <- str_split_i(pc_info$citation," ", 1)
 ```{r pc1_pc2}
 # rough plot
 pc_plot1 <- ggplot(data=pc_info, aes(x=PC1, y=PC2, label = sample_name)) + 
-  geom_point(aes(color = citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 ```
 
 ```{r}
@@ -68,7 +65,7 @@ Check out the other PCs
 ```{r pc1_pc3}
 # rough plot
 pc_plot2 <- ggplot(data=pc_info, aes(x=PC1, y=PC3, label = sample_name)) + 
-  geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 
 pc_plot2
 ```
@@ -76,14 +73,14 @@ Kind of interested in the way Kryvokhyzha 2016 did it where they looked at the P
 ```{r}
 # plotting PCs with location data
 pc_plot3 <- ggplot(data=pc_info, aes(x=PC1, y=latitude, label = sample_name)) + 
-  geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 
 pc_plot3
 ```
 ```{r}
 # plotting PCs with location data
 pc_plot4 <- ggplot(data=pc_info, aes(x=longitude, y=PC1, label = sample_name)) + 
-  geom_point(aes(color = citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 
 pc_plot4
 ```
@@ -91,11 +88,14 @@ I do not think these plots necessarily give me any new information.
 ```{r}
 # plotting PCs with location data
 pc_plot5 <- ggplot(data=pc_info, aes(x=longitude, y=latitude, label = sample_name)) + 
-  geom_point(aes(color = PC1)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+  geom_point(aes(color = PC2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 
 pc_plot5
 ```
 
+It seems like PC1 largely captures the East Asian population separating out from everyone else, and PC2 is picking up on the Mediterranean populations.
+
+For NYC, PC1 is capturing variation driven by population 24, while pc2 is capturing variation driven by population 14.
 
 # Capsella population admixture results and cluster assignment
 Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
@@ -202,10 +202,10 @@ We are interested in how the Admixture group containing genotypes from northern 
 
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-eu_fam <- read.delim(paste0(eu_admix_dir, "plink2_pruned_cbp.fam"), header=FALSE)
+eu_fam <- read.delim(paste0(admix_dir, "eurasian_pruned_cbp.fam"), header=FALSE)
 
 # read in Cross Validation (cv) error log
-eu_cv <- read.delim(paste0(eu_admix_dir, "cv_error.log"), header = FALSE, sep = ":")
+eu_cv <- read.delim(paste0(admix_dir, "cv_error.log"), header = FALSE, sep = ":")
 
 # list the files in admixture directory matching suffix pattern
 #tbl <- list.files(path = admix_dir, pattern = "*.P") # .P files are allele frequencies of inferred ancestral populations; commented out because I do not use these files
