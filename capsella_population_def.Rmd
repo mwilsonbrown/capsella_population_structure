@@ -16,8 +16,8 @@ library(rnaturalearth) # for maps
 
 I have written functions for the plots I want and selecting K.
 We can source the functions from capsella_pop_introgression_functions.R
-```{r}
-source("~/Documents/PhD/Research/capsella_introgression/capsella_pop_introgressin_functions.R")
+```{r load functions}
+source("~/Documents/PhD/Research/capsella_introgression/capsella_pop_def_functions.R")
 ```
 
 ```{r directory variables}
@@ -35,37 +35,37 @@ conditional_dir = "~/Documents/PhD/Research/capsella_population_structure/nyc_eu
 ```
 
 ```{r capsella sequenced information}
-#wgs <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_combined_wgs_v2.txt", sep = "\t", header = T)
-
 vcf_dat <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
-# Capsella bursa-pastoris Principle Components
-```{r}
+
+# Capsella bursa-pastoris Principle Components -- All Populations
+```{r pca eigenstuff}
 # read in eigenvec and eigenval data
 vec <- read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp/all_cbp.eigenvec", sep = "\t", header = T) #values on each PC
 
 val <-  read.csv("~/Documents/PhD/Research/capsella_population_structure/all_cbp/all_cbp.eigenval", sep = "\t", header = F) #PC variances explained
 ```
 
-```{r}
+```{r join pca with meta}
 # match individual IDs to informative data
 pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+
+# make shortened citation name for plotting (joins Kryvohkhyzha papers)
 pc_info$citation2 <- str_split_i(pc_info$citation," ", 1) 
 ```
 
-```{r}
+```{r pc1_pc2}
 # rough plot
 pc_plot1 <- ggplot(data=pc_info, aes(x=PC1, y=PC2, label = sample_name)) + 
-  geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+  geom_point(aes(color = citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
 ```
 
 ```{r}
 pc_plot1
 ```
-I seemingly need to do some more filtering.
 
 Check out the other PCs
-```{r}
+```{r pc1_pc3}
 # rough plot
 pc_plot2 <- ggplot(data=pc_info, aes(x=PC1, y=PC3, label = sample_name)) + 
   geom_point(aes(color = pc_info$citation2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
@@ -180,7 +180,7 @@ k3_3 <- admix_cluster_assignment[which(admix_cluster_assignment$k3_pop == "pop3"
 ```{r location data for Capsella clusters}
 # combine with location information
 #cap_k3_anc_info <- ancestry_location(cap_k3$data, vcf_dat)
-cap_k3_anc_info <- ancestry_location2(cap_k3$data, vcf_dat)
+cap_k3_anc_info <- leftJoin(cap_k3$data, vcf_dat) # when no location data needs to be interpolated
 
 # get sample name to k group key
 cap_k3_key <- assign_ancestry(cap_ancestry_propsK, K =3, sample_names_fam = cap_info_fam)
