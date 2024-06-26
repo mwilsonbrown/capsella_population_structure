@@ -16,8 +16,7 @@ First, I will compare all potential samples to samples that made it into the fin
 # on HPCC
 cd /mnt/research/josephslab/Maya/capsella/vcf/adrian_vcf/
 # get sample names from VCF
-#bcftools query -l CbpCr_Cbp_new_filtered.vcf.gz > Capsella_vcf_samples.txt
-bcftools query -l final_called_all.CBPCRCG.v.vcf > cbp_crcg_vcf_sample_names.txt
+bcftools query -l 
 ```
 
 ```{r}
@@ -46,7 +45,7 @@ cbp <- cbp[str_detect(cbp$sample_name, "parent", negate = T),]
 Finally, write to table for use on HPCC.
 ```{r all Capsella bursa-pastoris in VCF}
 #write C. bursa-pastoris VCF names to list
-write.table(cbp$vcf_sample_name, "~/Downloads/vcf_cbp_only_0613_2024.txt", quote = F, sep = "\t", row.names = F, col.names = F)
+write.table(cbp$vcf_sample_name, "~/Downloads/vcf_cbp_only_0625_2024.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 ```
 
 # Conditioning ancestry proportions on clusters in a reference panel -- projection analysis
@@ -61,8 +60,9 @@ First, to make the data sets that will go into this analysis
 # selecting NYC only samples
 nyc <- cbp[which(cbp$citation == "R.Panko"),]
 
-# eurasian samples, also removing WAC5 and mt-msu
-eurasia <- subset(cbp, !(sample_name %in% c("wt-msu", "WAC5", nyc$sample_name)))
+# eurasian samples, also removing WAC5 becaue it is not in Eurasia
+# WAC5 is from Waco, Texas
+eurasia <- subset(cbp, !(sample_name %in% c("WAC5", nyc$sample_name)))
 ```
 
 ```{r}
@@ -143,12 +143,21 @@ diff -s eurasian_pruned_cbp.bim nyc_pruned_cbp.bim
 # ADMIXTURE only takes chromosomes as numbers so in all the PLINK output files, jlSCF_ needs to be removed
 sed -i 's/^jlSCF_//g' eurasian_pruned_cbp.bed
 sed -i 's/^jlSCF_//g' eurasian_pruned_cbp.bim
-sed -i 's/^jlSCF_//g' all_cbp.fam
+sed -i 's/^jlSCF_//g' eurasian_pruned_cbp.fam
+
+#do the same for NYC files
+sed -i 's/^jlSCF_//g' nyc_pruned_cbp.bed
+sed -i 's/^jlSCF_//g' nyc_pruned_cbp.bim
+sed -i 's/^jlSCF_//g' nyc_pruned_cbp.fam
 
 # also change the names of the final two contigs to be numeric only; makes them called 21 and 22
 sed -i 's/^contig_/2/g' eurasian_pruned_cbp.bed
 sed -i 's/^contig_/2/g'	eurasian_pruned_cbp.bim
 sed -i 's/^contig_/2/g'	eurasian_pruned_cbp.fam
+
+sed -i 's/^contig_/2/g' nyc_pruned_cbp.bed
+sed -i 's/^contig_/2/g'	nyc_pruned_cbp.bim
+sed -i 's/^contig_/2/g'	nyc_pruned_cbp.fam
 
 # Run unsupervised ADMIXTURE with K=2
 admixture eurasian_pruned_cbp.bed 2
