@@ -17,22 +17,20 @@ library(rnaturalearth) # for maps
 I have written functions for the plots I want and selecting K.
 We can source the functions from capsella_pop_introgression_functions.R
 ```{r load functions}
-source("~/Documents/PhD/Research/capsella_introgression/capsella_pop_def_functions.R")
+source("~/Documents/PhD/Research/capsella_population_structure/capsella_pop_def_functions.R")
 ```
 
 ```{r directory variables}
 # load data directory
 admix_dir <- "~/Documents/PhD/Research/capsella_population_structure/data/"
 temp_plot <- "~/Documents/PhD/Research/capsella_population_structure/temp_plots/"
-plot_dir <- "~/Documents/PhD/Research/capsella_population_structure/plots"
+plot_dir <- "~/Documents/PhD/Research/capsella_population_structure/plots/"
 ```
 
 ```{r capsella sequenced information}
 # load information about samples
 vcf_dat <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
-
-One of the first things I would like to do is back fill locations for data points in the VCF. For example, many from the Douglass paper do not have lat and long, but they have general cities in the notes. I would also like to fill in country names for locations that do have a latitude and longitude.
 
 
 # Capsella bursa-pastoris Principle Components -- All Populations
@@ -41,61 +39,96 @@ One of the first things I would like to do is back fill locations for data point
 vec <- read.csv(paste0(admix_dir, "all_pruned_cbp.eigenvec"), sep = "\t", header = T) #values on each PC
 
 val <-  read.csv(paste0(admix_dir, "all_pruned_cbp.eigenval"), sep = "\t", header = F) #PC variances explained
+
+
+# percantage of variance explained by each PC
+percentage <- round((val/(sum(val))*100), 2)
+percentage <- as.matrix(percentage)
+percentage <- paste0(names(percentage), " (", percentage, "%)")
 ```
 
 ```{r join pca with meta}
 # match individual IDs to informative data
 pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
 
-# make shortened citation name for plotting (joins Kryvohkhyzha papers)
-pc_info$citation2 <- str_split_i(pc_info$citation," ", 1) 
+# make continent column?
+pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
+                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Medditeranean",
+                                      country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
+                                      country %in% c("China", "Taiwan") ~ "E. Asia",
+                                      country == "United States" ~ "US"))
 ```
 
 ```{r pc1_pc2}
 # rough plot
-pc_plot1 <- ggplot(data=pc_info, aes(x=PC1, y=PC2, label = sample_name)) + 
-  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+pc_plot1 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region)) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
+  theme_bw() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
+
+pc_plot1
 ```
 
 ```{r}
-pc_plot1
+# save plot
+ggsave(paste0(temp_plot, "all_cbp_pca1.png"), pc_plot1, height = 5, width = 8)
 ```
+
 
 Check out the other PCs
 ```{r pc1_pc3}
 # rough plot
-pc_plot2 <- ggplot(data=pc_info, aes(x=PC1, y=PC3, label = sample_name)) + 
-  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+pc_plot2  <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = region)) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC3, label = sample_name), size = 2) +
+  theme_bw() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
 
+
+#plot it
 pc_plot2
+# save plot
+ggsave(paste0(temp_plot, "all_cbp_pca2.png"), pc_plot2, height = 5, width = 8)
 ```
-Kind of interested in the way Kryvokhyzha 2016 did it where they looked at the PCs with climate and geographic data.
+
+It seems like PC1 largely captures the US and Northern Europe population separating out from everyone else, and PC2 is picking up on the Mediterranean populations.
+
+Now let's look within NY.
+```{r pca eigenstuff}
+# read in eigenvec and eigenval data
+vec <- read.csv(paste0(admix_dir, "nyc_pruned_cbp.eigenvec"), sep = "\t", header = T) #values on each PC
+
+val <-  read.csv(paste0(admix_dir, "nyc_pruned_cbp.eigenval"), sep = "\t", header = F) #PC variances explained
+
+
+# percantage of variance explained by each PC
+percentage <- round((val/(sum(val))*100), 2)
+percentage <- as.matrix(percentage)
+percentage <- paste0(names(percentage), " (", percentage, "%)")
+```
+
+```{r join pca with meta}
+# match individual IDs to informative data
+pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+```
+
 ```{r}
-# plotting PCs with location data
-pc_plot3 <- ggplot(data=pc_info, aes(x=PC1, y=latitude, label = sample_name)) + 
-  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
+# rough plot
+nyc_pc_plot1 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = city)) +
+  geom_text_repel(data= pc_info, aes(x=PC1, y=PC2, label = population), size = 2) +
+  theme_bw() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
 
-pc_plot3
+nyc_pc_plot1
 ```
 ```{r}
-# plotting PCs with location data
-pc_plot4 <- ggplot(data=pc_info, aes(x=longitude, y=PC1, label = sample_name)) + 
-  geom_point(aes(color = as.factor(population))) + geom_text(hjust = 1, vjust = 0.2, size = 2)
-
-pc_plot4
-```
-I do not think these plots necessarily give me any new information.
-```{r}
-# plotting PCs with location data
-pc_plot5 <- ggplot(data=pc_info, aes(x=longitude, y=latitude, label = sample_name)) + 
-  geom_point(aes(color = PC2)) + geom_text(hjust = 1, vjust = 0.2, size = 2)
-
-pc_plot5
+# save plot
+ggsave(paste0(temp_plot, "nyc_cbp_pca1.png"), nyc_pc_plot1, height = 5, width = 8)
 ```
 
-It seems like PC1 largely captures the East Asian population separating out from everyone else, and PC2 is picking up on the Mediterranean populations.
-
-For NYC, PC1 is capturing variation driven by population 24, while pc2 is capturing variation driven by population 14.
+For NYC, PC1 is capturing variation driven by population 24 (New Jersey), while pc2 is capturing variation driven by population 14 (Jerico).
 
 # Capsella population admixture results and cluster assignment
 Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
@@ -110,7 +143,6 @@ cap_fam <- read.delim(paste0(admix_dir, "all_cbp.fam"), header=FALSE)
 cap_cv <- read.delim(paste0(admix_dir, "all_cbp_cv_error.log"), header = FALSE, sep = ":")
 
 # list the files in admixture directory matching suffix pattern
-#tbl <- list.files(path = admix_dir, pattern = "*.P") # .P files are allele frequencies of inferred ancestral populations; commented out because I do not use these files
 lst <- list.files(path = admix_dir, pattern = "*.Q") # Q files are ancestry fractions for each sample
 
 cap_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
