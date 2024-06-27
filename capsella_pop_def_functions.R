@@ -27,6 +27,11 @@ world <- ggplot()+ geom_sf(data= whole, fill="gray93")+
 
 ######## DATA ANALYSIS FUNCTIONS
 # Select K
+plotK <- function(cv_error_log){
+  cv.plot <- plot(x=cv_error_log$K_groups, y =cv_error_log$V2, ylab = "cross validation error rate", xlab = "K groups")
+  return(cv.plot)
+}
+
 # K is the number of groupings for which ADMIXTURE has the initial lowest cross validation error rate
 selectK <- function(cv_error_log = cv){
   slopes <- (lead(cv_error_log$V2)-cv_error_log$V2)/(lead(1:nrow(cv_error_log))-c(1:nrow(cv_error_log))) # slopes
@@ -108,37 +113,41 @@ ancestry_location2 <- function(ancestry_data, whole_genome_sequencing){
 }
 
 ## Assign majority ancestry group
-assign_ancestry <- function(ancestry_proportion_list, K, list_element = K, sample_names_fam){
-  # select population proportion columns
-  props <- ancestry_proportion_list[[list_element]]
+assign_ancestry <- function(ancestry_proportion_list, list_element_name){
+  # Print selected K and set K
+  K = as.numeric(str_extract(list_element_name, "[0-9]+")) # extract only the number from list name and treat as number
+  print(paste0("Selected K groups is ", K))
   
+  # select dataframe associated with K
+  props <- ancestry_proportion_list[[list_element_name]]
   # for each row (apply,1) select the column name in which the maximum value (of ancestry proportion) is found; replace the column indicator 'V' with 'pop'
-  group <- str_replace(colnames(props)[apply(props,1, which.max)], "V", "pop")
-  
+  group <- str_replace(colnames(props)[apply(props[1:K],1, which.max)], "V", "pop")
   # add sample names back
-  key <- as.data.frame(cbind(sample_names_fam$V2, group))
-  colnames(key) <- c("vcf_sample_name", "anc_group")
-  return(key)
+  df <- as.data.frame(cbind(props, group))
+  return(df)
 }
 
 ######## PLOTTING FUNCTIONS
 # Ancestry Bars Plot
-ancestry_bars <- function(ancestry_proportion_list, K, list_element = K, sample_names_fam, ggplot_opt = NULL){
-  # bind sample information to lowest CV error data frame
-  ancestry_dat <- cbind(sample_names_fam[,1:2], ancestry_proportion_list[[list_element]])
+ancestry_bars2 <- function(ancestry_proportion_list, list_element_name, ggplot_opt = NULL){
+  # Print selected K and set K
+  K = as.numeric(str_extract(list_element_name, "[0-9]+")) # extract only the number from list name and treat as number
+  print(paste0("Selected K groups is ", K))
   
-  # change column names to vector of sample name and various K populations
-  colnames(ancestry_dat) <- c("vcf_sample_name","sample_name", paste0("pop", c(1:K)))
+  # select dataframe associated with K
+  ancestry_dat <- ancestry_proportion_list[[list_element_name]]
+  # change column names to vector of various K populations and vcf names
+  colnames(ancestry_dat) <- str_replace(colnames(ancestry_dat), "V", "pop")
   
   # make data long form
   ad_long <- pivot_longer(ancestry_dat, 
-                          cols = colnames(ancestry_dat)[-c(1:2)], 
+                          cols = colnames(ancestry_dat)[1:K], 
                           names_to = "ancestry", 
                           values_to = "proportion")
   # order rows by ancestry, then proportion columns
   anc <- ad_long %>% arrange(desc(ancestry), proportion)
   # order sample names to be in ancestry proportion order
-  lvl.order <- c(anc[1:nrow(sample_names_fam), "vcf_sample_name"])$vcf_sample_name
+  lvl.order <- c(anc[1:nrow(ancestry_dat), "vcf_sample_name"])$vcf_sample_name
   anc$vcf_sample_name <- factor(anc$vcf_sample_name, levels = lvl.order) # the levels argument here is the one that matters
   
   # adding ggplot options, for if I want to add custom colors for populations
