@@ -6,12 +6,11 @@ output: html_document
 ---
 ```{r}
 library(ggplot2)
+library(ggrepel)
 library(tidyr)
 library(stringr)
 library(dplyr)
-library(tidygeocoder) # for grabbing lat and long from city names
 library(rnaturalearth) # for maps
-#library(forcats) # do I actually use this package for anything?
 ```
 
 I have written functions for the plots I want and selecting K.
@@ -123,6 +122,8 @@ nyc_pc_plot1 <- ggplot() +
 
 nyc_pc_plot1
 ```
+
+Save image
 ```{r}
 # save plot
 ggsave(paste0(temp_plot, "nyc_cbp_pca1.png"), nyc_pc_plot1, height = 5, width = 8)
@@ -134,85 +135,65 @@ For NYC, PC1 is capturing variation driven by population 24 (New Jersey), while 
 Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
 
 Load in the ADMIXTURE output data
-
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-cap_fam <- read.delim(paste0(admix_dir, "all_pruned_cbp.fam"), header=FALSE)
-
-# read in Cross Validation (cv) error log
-cap_cv <- read.delim(paste0(admix_dir, "all_cbp_cv_error.log"), header = FALSE, sep = ":")
+cbp_fam <- read.delim(paste0(admix_dir, "all_pruned_cbp.fam"), header=FALSE)
 
 # list the files in admixture directory matching suffix pattern
-lst <- list.files(path = admix_dir, pattern = "*.Q") # Q files are ancestry fractions for each sample
+lst <- list.files(path = admix_dir, pattern = "all_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
 
-cap_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
+cbp_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
 #loop to load sample data
 for (file in lst) {
   file_path <- file.path(admix_dir, file)  # Get the full file path
-  cap_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
-}         
+  cbp_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
+}
 ```
 
-I only use the fam file for joining with the PLINK2 output, and the vcf names are never that informative to me. So I will add the sample names to the fam data file so I can use it more effectively.
 ```{r}
-# join fam with sample names
-cap_info_fam <- left_join(cap_fam[2], vcf_dat, join_by("V2" == "vcf_sample_name"))
+# create sample name key from fam file 
+cbp_name_key <- left_join(data.frame(cbp_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name")],
+                         join_by("cbp_fam.V2" == "vcf_sample_name"))
+colnames(cbp_name_key)[1] <- "vcf_sample_name"
+
+# bind fam file to all ADMIXTURE files
+#ea_p <- lapply(ea_ancestry_propsK, transform, vcf_sample_name=ea_fam$V2)
+cbp_p <- Map(cbind, cbp_ancestry_propsK, list(cbp_name_key))
+
+# name list elements by the K groups they represent
+names(cbp_p) <- paste0("K",str_extract(names(cbp_p), "[0-9]+"))
+rm(cbp_ancestry_propsK)
 ```
 
 
-Cross validation of lowest error K groups
-```{r CV validation of all Capsella bursa-pastoris}
-#K = selectK(cap_cv)
-selectK(cap_cv)
-#print(K)
+Now to look at the cross validation error rates
+```{r cv_error K groups}
+# read in Cross Validation (cv) error log
+cbp_cv <- read.delim(paste0(admix_dir, "all_cbp_cv_error.log"), header = FALSE, sep = ":")
+# extract K groups from string
+cbp_cv$K_groups <- str_extract(cbp_cv$V1, "[0-9]+")
 
-K = 3
+# Plot
+plotK(cbp_cv)
 ```
 
 
+Looks like K = 4 has the lowest CV error rate. This makes sense considering we expect about three groups in the ancestral range, plus NYC.
 ```{r}
 # make ancestry bars plot
 #cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
-cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_info_fam, ggplot_opt =
-  scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
-# plot
-cap_k3
 
-```
-
-```{r save image}
-# save image
-ggsave("~/Documents/PhD/Research/capsella_population_structure/plots/cbp_k3.png", width = 13, height = 7, units = "in")
-```
-
-There is a very reasonable argument for using k=4 here so lets try it!
-```{r}
-cap_k4 <- ancestry_bars(cap_ancestry_propsK, K = 4,list_element = 4, sample_names_fam=cap_info_fam)
+cap_k4 <- ancestry_bars2(cbp_p, "K4")
 # plot
 cap_k4
 
-#ggsave("~/Documents/PhD/Research/capsella_population_structure/plots/cbp_k4.png", width = 13, height = 7, units = "in")
 ```
 
-```{r location data for Capsella clusters}
-# combine with location information
-#cap_k3_anc_info <- ancestry_location(cap_k3$data, vcf_dat)
-cap_k3_anc_info <- leftJoin(cap_k3$data, vcf_dat) # when no location data needs to be interpolated
-
-# get sample name to k group key
-cap_k3_key <- assign_ancestry(cap_ancestry_propsK, K =3, sample_names_fam = cap_info_fam)
-
-# combine key with location data
-cap_k3 <- left_join(cap_k3_anc_info, cap_k3_key)
+```{r save cbp image}
+# save image
+ggsave(paste0(temp_plot,"cbp_k4.png"), cap_k4, width = 13, height = 7, units = "in")
 ```
 
-Clusters on a map
-```{r all Capsella maps}
-world + geom_point(data=cap_k3, aes(x=longitude, y=latitude, fill = anc_group, color = NULL), shape=21) +
-  scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1"))
-
-#ggsave("cbp_k3_map.png", width = 13, height = 7, units = "in")
-```
 
 #### ADMIXTURE conditioned on K
 
@@ -310,7 +291,7 @@ ea_k2_map <- eurasia + geom_point(data=ea_k2_ancestryL, aes(x=longitude, y=latit
 
 ea_k2_map
 
-ggsave(paste0(temp_plot, "eurasian_k2_bigDots.png"),ea_k3_map, width = 13, height = 7, units = "in")
+ggsave(paste0(temp_plot, "eurasian_k2_bigDots.png"),ea_k2_map, width = 13, height = 7, units = "in")
 ```
 
 
@@ -350,7 +331,7 @@ ea_k4_ancestryL <- left_join(ea_k4_ancestry, vcf_dat[c("vcf_sample_name","sample
 ```
 
 ```{r}
-ea_k4_map <- eurasia + geom_point(data=k4_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) 
+ea_k4_map <- eurasia + geom_point(data=ea_k4_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) 
 
 ea_k4_map
 
@@ -421,19 +402,6 @@ names(nyc_p) <- paste0("K",str_extract(names(nyc_p), "[0-9]+"))
 rm(nyc_ancestry_propsK)
 ```
 
-```{r cv_error K groups}
-# read in Cross Validation (cv) error log
-nyc_cv <- read.delim(paste0(admix_dir, "eua_cv_error.log"), header = FALSE, sep = ":")
-# extract K groups from string
-nyc_cv$K_groups <- str_extract(nyc_cv$V1, "[0-9]+")
-
-# Plot
-plotK(nyc_cv)
-
-# select K
-#K = selectK(ea_cv)
-```
-
 ```{r eurasian k2, eval=FALSE}
 # data for k = 2 on Eurasian group
 nyc_k2 <- ancestry_bars2(nyc_p, "K2")
@@ -502,43 +470,52 @@ cond_k4_map
 
 ggsave(paste0(temp_plot, "cond_k4_bigDots.png"),cond_k4_map, width = 13, height = 7, units = "in")
 ```
+With all of the above plots, the East Asian population always stands out. There is evidence that there is more continuous structure or some sort of gradient moving from the Mediterranean region, through central Asia (Kyrgyzstan).
 
-# European Only admixture
-We are interested in how the Admixture group containing genotypes from northern Europe compare to NYC. I run another admixture analysis only including individuals that have 60% or more ancestry proportion belonging to Population 3 when K=3 (Red individuals above).
+This is also good evidence that we can use some individuals from the East Asian group as a parental population in the local ancestry inference.
+
+Regardless of whether K=2,3, or 4, there are always 33 individuals that are in the East Asian cluster with no admixture present. I think it makes sense to use 25-30 individuals as the parental group in the LAI, and verify there's no inferred *C. rubella* ancestry with the rest.
+
+# NYC and European with/out MENA 
+Seeing as the NYC individuals seems to clearly have a lot of shared variation with the Northern European group, it is worth seeing how NYC individuals partition into this group.
+
+I think given the number of NYC individuals, I may try to condition their admixture proportions on Northern European alone and Northern European + MENA together. I am not sure how useful it would be to see the NYC individuals form their own cluster, but I will run that as well.
+
+Plan:
+- PCA with NYC + N. Europe (and MENA)
+- Admixture in NYC conditioned on allele frequencies in N. EU + Mena (K=1,2,3,4,5)
+- Admixture free on NYC + N.EU + MENA (to see if the CV error rates suggest NYC wants to cluster on its own)
+  - if NYC does cluster on its own freely with N.EU + Mena, that *could* suggest there's been quite a bit of allele frequency change across continents **OR** the NYC group is just large and it popping out as its own cluster could be an artifact of over fitting (? but I really do not know if that matters and would have to look at the documentation for ADMIXTURE)
+  - 
+
+```{r select Euro group}
+# select individuals whose ancestry is not the East Asian group: pop2 when k=4
+
+notEA <- k4_ancestryL[which(k4_ancestryL$group != "pop2"),]
+
+notEANYC <- k4_ancestryL[which(k4_ancestryL$group != "pop2" & k4_ancestryL$vcf_sample_name),]
+```
+
+```{r}
+#save and write files
+write.table(notEA$vcf_sample_name, file = "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_nyc_eu_mena.txt", quote = F, row.names = F, col.names = F, sep = "\t")
+```
 
 # Write populations to file
 At this point, it makes sense to generate a key for generalized population structure to use in other analyses.
 Specifically, I am going to use these population groups in the PIXY analyses, and other explorations of comparisons between the populations at the local genomic scale.
 
-Here, I just plan to combine the population keys generated above. I consider the conditional analysis to reflect the truest and most parsable population structure.
+Here, I just plan to combine the population keys generated above. I consider the conditional analysis to reflect the truest and most probable population structure.
 
-```{r cbp population file generation}
-# combine eurasian samples with NYC for each usable value of K.
-K2_cond_key <- rbind(k2_key, ny_k2_key)
-K4_cond_key <- rbind(k4_key, ny_k4_key)
+The most useful and informative clustering is when K=3, so I will use that to define clusters
 
-# add new column to make the population identifiers descriptive
-K2_cond_key <- K2_cond_key %>%
-  mutate(k2_group = case_when(anc_group == "pop1" ~ "east_asian", 
-                               anc_group == "pop2" ~ "european",
-                               ))
-K4_cond_key <- K4_cond_key %>%
-  mutate(k4_group = case_when(anc_group == "pop1" ~ "mediterranean",
-                              anc_group == "pop2" ~ "n_european",
-                              anc_group == "pop3" ~ "east_asian",
-                              anc_group == "pop4" ~ "central",
-                               ))
-
-# combine both K =2 and K =4 into single data set; leaving out the anc_group column
-cbp_pops <- left_join(K2_cond_key[,-2], K4_cond_key[,-2], )
-
-# ALT: For separating out NYC; row 60 and below are nyc
-#copy column to new column
-cbp_pops$nyc2k4 <- cbp_pops$k4_group
-#change NYC samples to be NYC
-cbp_pops$nyc2k4[60:nrow(cbp_pops)] <- "nyc"
+```{r}
+k3Pops <- k3_ancestryL %>% mutate(k3population = case_when(group == "pop1" ~ "N_Europe",
+                                                         group == "pop2" ~ "E_Asia",
+                                                         group == "pop3" ~ "MENA"))
 ```
+
 Now I will write the data population data to file
 ```{r save cbp population file, eval=FALSE}
-write.table(cbp_pops, file = "~/Documents/PhD/Research/capsella_introgression/pixy_pop_march26_2024.txt", col.names = F, row.names = F, quote = F, sep = "\t")
+write.table(k3Pops[c("vcf_sample_name","k3population")], file = "~/Documents/PhD/Research/capsella_population_structure/pixy_pops.txt", col.names = F, row.names = F, quote = F, sep = "\t")
 ```
