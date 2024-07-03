@@ -506,8 +506,64 @@ write.table(nEU$vcf_sample_name, file = "~/Documents/PhD/Research/capsella_popul
 
 # Northern European & NYC Plots
 
+Starting with PCA of NYC with N. European group (minus wt-msu).
+
+```{r pca eigenstuff}
+# read in eigenvec and eigenval data
+vec <- read.csv(paste0(admix_dir, "nyc_neu/nyc_neu_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
+
+val <-  read.csv(paste0(admix_dir, "nyc_neu/nyc_neu_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
 
 
+# percantage of variance explained by each PC
+percentage <- round((val/(sum(val))*100), 2)
+percentage <- as.matrix(percentage)
+percentage <- paste0(names(percentage), " (", percentage, "%)")
+```
+
+```{r join pca with meta}
+# match individual IDs to informative data
+pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+```
+
+```{r}
+# rough plot
+nyc_neu_pc_plot1 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = country)) +
+  theme_bw() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2])) +
+  geom_text_repel(data=subset(pc_info, country != "United States"), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2)
+
+nyc_neu_pc_plot1
+```
+PC1 seems to separate some of the Chinese plants from the rest, while PC2 clusters mainland Europe from others.
+
+Save image
+```{r}
+# save plot
+ggsave(paste0(temp_plot, "nyc_neu_cbp_pca1.png"), nyc_neu_pc_plot1, height = 5, width = 8)
+```
+
+```{r}
+# rough plot
+nyc_neu_pc_plot2 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = country)) +
+  theme_bw() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3])) +
+  geom_text_repel(data=subset(pc_info, country != "United States"), aes(x=PC1, y=PC3, label = sample_name), max.overlaps = 50, size = 2)
+
+nyc_neu_pc_plot2
+```
+```{r}
+# rough plot
+nyc_neu_pc_plot3 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC2, y=PC3, color = country)) +
+  theme_bw() +
+  labs(x=paste0("PC2",percentage[2]), y= paste0("PC3",percentage[3])) +
+  geom_text_repel(data=subset(pc_info, country != "United States"), aes(x=PC2, y=PC3, label = sample_name), max.overlaps = 50, size = 2)
+
+nyc_neu_pc_plot3
+```
 # Write populations to file
 At this point, it makes sense to generate a key for generalized population structure to use in other analyses.
 Specifically, I am going to use these population groups in the PIXY analyses, and other explorations of comparisons between the populations at the local genomic scale.
@@ -517,12 +573,13 @@ Here, I just plan to combine the population keys generated above. I consider the
 The most useful and informative clustering is when K=3, so I will use that to define clusters
 
 ```{r}
-k3Pops <- k3_ancestryL %>% mutate(k3population = case_when(group == "pop1" ~ "N_Europe",
+# create descriptive column for ancestral range population groups
+k3Pops <- ea_k3_ancestryL %>% mutate(k3population = case_when(group == "pop1" ~ "N_Europe",
                                                          group == "pop2" ~ "E_Asia",
                                                          group == "pop3" ~ "MENA"))
 ```
 
 Now I will write the data population data to file
 ```{r save cbp population file, eval=FALSE}
-write.table(k3Pops[c("vcf_sample_name","k3population")], file = "~/Documents/PhD/Research/capsella_population_structure/pixy_pops.txt", col.names = F, row.names = F, quote = F, sep = "\t")
+write.table(k3Pops[c("vcf_sample_name","sample_name","k3population", "latitude", "longitude", "latlong_approx")], file = "~/Documents/PhD/Research/capsella_population_structure/cbp_pop_str.txt", col.names = T, row.names = F, quote = F, sep = "\t")
 ```
