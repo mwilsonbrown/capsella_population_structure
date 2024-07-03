@@ -479,205 +479,33 @@ Regardless of whether K=2,3, or 4, there are always 33 individuals that are in t
 # NYC and European with/out MENA 
 Seeing as the NYC individuals seems to clearly have a lot of shared variation with the Northern European group, it is worth seeing how NYC individuals partition into this group.
 
-I think given the number of NYC individuals, I may try to condition their admixture proportions on Northern European alone and Northern European + MENA together. I am not sure how useful it would be to see the NYC individuals form their own cluster, but I will run that as well.
+I think given the number of NYC individuals, I may try to condition their admixture proportions on Northern European alone. I am not sure how useful it would be to see the NYC individuals form their own cluster, but I will run that as well.
+
+**NOTE:** Originally, I included Mediterranean/Middle Eastern,North African individuals in the analysis, but it became clear that was not useful or informative since they form their own cluster quite removed from the N. Europe and NYC individuals.
+
+For the following analyses, I only include samples that have majority N. European ancestry when K=3 in the ancestral range with individuals from New York and New Jersey.
 
 Plan:
-- PCA with NYC + N. Europe (and MENA)
+- PCA with NYC + N. Europe
 - Admixture in NYC conditioned on allele frequencies in N. EU + Mena (K=1,2,3,4,5)
-- Admixture free on NYC + N.EU + MENA (to see if the CV error rates suggest NYC wants to cluster on its own)
-  - if NYC does cluster on its own freely with N.EU + Mena, that *could* suggest there's been quite a bit of allele frequency change across continents **OR** the NYC group is just large and it popping out as its own cluster could be an artifact of over fitting (? but I really do not know if that matters and would have to look at the documentation for ADMIXTURE)
+- Admixture free on NYC + N.EU (to see if the CV error rates suggest NYC wants to cluster on its own)
+  - if NYC does cluster on its own freely with N.EU, that *could* suggest there's been quite a bit of allele frequency change across continents **OR** the NYC group is just large and it popping out as its own cluster could be an artifact of over fitting (? but I really do not know if that matters and would have to look at the documentation for ADMIXTURE)
 
 ```{r select Euro group}
-# select individuals whose ancestry is not the East Asian group: pop2 when k=4
+# select individuals whose ancestry is not the East Asian group: pop1 when k=3
+nEU <- ea_k3_ancestry[which(ea_k3_ancestryL$group == "pop1"),]
 
-notEA <- k4_ancestryL[which(k4_ancestryL$group != "pop2"),]
-
-notEANYC <- k4_ancestryL[which(k4_ancestryL$group != "pop2" & k4_ancestryL$vcf_sample_name),]
+# remove wt-msu because of the way PC3 in the whole CBP PCA draws 3 of them out
+nEU <- nEU[which(nEU$sample_name != "wt-msu"),]
 ```
 
 ```{r}
 #save and write files
-write.table(notEA$vcf_sample_name, file = "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_nyc_eu_mena.txt", quote = F, row.names = F, col.names = F, sep = "\t")
+write.table(nEU$vcf_sample_name, file = "~/Documents/PhD/Research/capsella_population_structure/vcf_neu.txt", quote = F, row.names = F, col.names = F, sep = "\t")
 ```
 
-# Northern European, NYC, and Middle Easterns/North African PCA
+# Northern European & NYC Plots
 
-```{r pca eigenstuff}
-# read in eigenvec and eigenval data
-vec <- read.csv(paste0(admix_dir, "eu_mena_nyc_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
-
-val <-  read.csv(paste0(admix_dir, "eu_mena_nyc_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
-
-
-# percantage of variance explained by each PC
-percentage <- round((val/(sum(val))*100), 2)
-percentage <- as.matrix(percentage)
-percentage <- paste0(names(percentage), " (", percentage, "%)")
-```
-
-```{r join pca with meta}
-# match individual IDs to informative data
-pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
-
-# make continent column?
-pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
-                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Medditeranean",
-                                      country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
-                                      country %in% c("China", "Taiwan") ~ "E. Asia",
-                                      country == "United States" ~ "US"))
-```
-
-```{r pc1_pc2}
-# rough plot
-pc_plot1 <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region)) +
-  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14","RK32")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
-  theme_bw() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
-
-pc_plot1
-```
-Given what's shown here on the first two PCs, I could rerun the PCA without the odd wt-msu sample. FY5 is also the only one to
-
-```{r}
-pc_plot2 <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region)) +
-  theme_bw() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2])) +
-  geom_text_repel(data=subset(pc_info, region == "MENA/Medditeranean"), aes(x=PC1, y=PC2, label = sample_name), size = 2, max.overlaps = 100)
-
-pc_plot2
-```
-
-Yeah, that other dot next to the East Asian samples is N. European. NYC harshly clusters with N. European samples.
-
-```{r}
-pc_plot3 <- ggplot() +
-  geom_point(data=subset(pc_info, region %in% c("N. Europe", "US", "E. Asia")), aes(x=PC1, y=PC2, color = region)) +
-  theme_bw() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2])) +
-  geom_text_repel(data=subset(pc_info, region %in% c("N. Europe", "US", "E. Asia")), aes(x=PC1, y=PC2, label = sample_name), size = 2, max.overlaps = 100)
-
-pc_plot3
-```
-
-# Admixture
-Even though I now know it probably makes the most sense to leave the MENA samples out of the admixture result becausr NYC so stringly clusters with N. Europe in the PCA, I will plot the admixture results anyway.
-
-Here is N. Europe and Mediterranean admixture.
-```{r import admixture output files}
-# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-emena_fam <- read.delim(paste0(admix_dir, "eu_mena_pruned_cbp.fam"), header=FALSE)
-
-# list the files in admixture directory matching suffix pattern
-lst <- list.files(path = admix_dir, pattern = "eu_mena_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
-
-emena_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
-#loop to load sample data
-for (file in lst) {
-  file_path <- file.path(admix_dir, file)  # Get the full file path
-  emena_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
-}
-```
-
-```{r}
-# create sample name key from fam file 
-emena_name_key <- left_join(data.frame(emena_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name")],
-                         join_by("emena_fam.V2" == "vcf_sample_name"))
-colnames(emena_name_key)[1] <- "vcf_sample_name"
-
-# bind fam file to all ADMIXTURE files
-#ea_p <- lapply(ea_ancestry_propsK, transform, vcf_sample_name=ea_fam$V2)
-emena_p <- Map(cbind, emena_ancestry_propsK, list(emena_name_key))
-
-# name list elements by the K groups they represent
-names(emena_p) <- paste0("K",str_extract(names(emena_p), "[0-9]+"))
-rm(emena_ancestry_propsK)
-```
-
-```{r cv_error K groups}
-# read in Cross Validation (cv) error log
-emena_cv <- read.delim(paste0(admix_dir, "emena_cv_error.log"), header = FALSE, sep = ":")
-# extract K groups from string
-emena_cv$K_groups <- str_extract(emena_cv$V1, "[0-9]+")
-
-# Plot
-plotK(emena_cv)
-
-# select K
-#K = selectK(ea_cv)
-```
-K=2
-```{r eu_mena k2}
-# data for k = 2 on Eurasian group
-emena_k2 <- ancestry_bars2(emena_p, "K2")
-
-#ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"))
-
-# make just the plot show up
-plot(emena_k2)
-
-ggsave(paste0(temp_plot,"eu_mena_cbp_k2.png"), emena_k2, width = 13, height = 7, units = "in")
-```
-
-Just out of curiosity
-```{r eu_mena k2}
-# data for k = 2 on Eurasian group
-emena_k3 <- ancestry_bars2(emena_p, "K3")
-
-#ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"))
-
-# make just the plot show up
-plot(emena_k3)
-
-ggsave(paste0(temp_plot,"eu_mena_cbp_k3.png"), emena_k3, width = 13, height = 7, units = "in")
-```
-Hm, there is definitely some kind of Russian and Central Asian thing going on.
-
-Let's look at how the NYC samples fit into these allele frequecy clusters
-```{r import admixture output files}
-# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-nyc_emena_fam <- read.delim(paste0(admix_dir, "nyc_pruned_cbp.fam"), header=FALSE)
-
-# list the files in admixture directory matching suffix pattern
-lst <- list.files(path = admix_dir, pattern = "nyc_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
-
-nyc_emena_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
-#loop to load sample data
-for (file in lst) {
-  file_path <- file.path(admix_dir, file)  # Get the full file path
-  nyc_emena_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
-}
-```
-
-```{r}
-# create sample name key from fam file 
-nyc_emena_name_key <- left_join(data.frame(nyc_emena_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name")],
-                         join_by("nyc_emena_fam.V2" == "vcf_sample_name"))
-colnames(nyc_emena_name_key)[1] <- "vcf_sample_name"
-
-# bind fam file to all ADMIXTURE files
-#ea_p <- lapply(ea_ancestry_propsK, transform, vcf_sample_name=ea_fam$V2)
-nyc_emena_p <- Map(cbind, nyc_emena_ancestry_propsK, list(nyc_emena_name_key))
-
-# name list elements by the K groups they represent
-names(nyc_emena_p) <- paste0("K",str_extract(names(nyc_emena_p), "[0-9]+"))
-rm(nyc_emena_ancestry_propsK)
-```
-
-Starting with K=2 because we know it is the best fit for the N. European and MENA group together
-```{r eu_mena k2}
-# data for k = 2 on Eurasian group
-nyc_emena_k2 <- ancestry_bars2(nyc_emena_p, "K2")
-
-#ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"))
-
-# make just the plot show up
-plot(nyc_emena_k2)
-
-ggsave(paste0(temp_plot,"nyc_eu_mena_cbp_k2.png"), nyc_emena_k2, width = 13, height = 7, units = "in")
-```
-Wow, not super interesting.
 
 
 # Write populations to file
