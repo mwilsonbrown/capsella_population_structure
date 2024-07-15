@@ -7,8 +7,6 @@ output: html_document
 
 Admixture analysis of global *Capsella bursa-pastoris* samples.
 
-Update: May 28, 2024; Adrian has new versions of VCFs aligned ot the NYC genome.
-
 ### Selecting C. bursa-pastoris samples from VCF
 
 First, I will compare all potential samples to samples that made it into the final VCF

@@ -11,6 +11,7 @@ library(tidyr)
 library(stringr)
 library(dplyr)
 library(rnaturalearth) # for maps
+library(scico) # colors
 ```
 
 I have written functions for the plots I want and selecting K.
@@ -31,6 +32,47 @@ plot_dir <- "~/Documents/PhD/Research/capsella_population_structure/plots/"
 vcf_dat <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
 
+# Colors
+Just setting up some colors
+```{r, eval=F}
+# roma
+"#7E1700" "#AC7726""#88D9D7" "#023198"
+# Roma (geographic regions)
+"#7E1700" "#B58B31" "#C0E9C2" "#389CC6" "#023198"
+
+# vik
+"#001260" "#71A7C4" "#D29773" "#590007"
+
+# Roma (geographic regions)
+region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C.Asia"="#023198")
+
+
+# Hawaii (populations) -- chosen
+pop.cols <- c("E_Asia" = "#8C0172", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#B2F2FD")
+
+#managua
+"#FFCE66" "#92463A" "#4D5492" "#80E6FF"
+
+
+# Bursa-pastoris to rubella range (vanimo)
+"#FFCCFD" "#5B244E" "#354819" "#BEFDA5"
+
+"#FFCCFD" "#BC62A8" "#1A1412"  "#6D9636" "#BEFDA5"
+
+
+#glasgow (geographic regions)
+#scico(5, palette = 'glasgow')
+#region_cols <- c("C. Asia" = "#351338", "E. Asia" = "#7E1700", "MENA/Medditeranean" = "#B58B31", "N. Europe" ="#69A3A5", "US" ="#DAD2FF") #super dull on white bg
+
+# Roma (geographic regions)
+region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C.Asia"="#023198")
+
+
+# Hawaii (populations) -- chosen
+pop.cols <- c("E_Asia" = "#8C0172", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#B2F2FD")
+
+
+```
 
 # Capsella bursa-pastoris Principle Components -- All Populations
 ```{r pca eigenstuff}
@@ -63,6 +105,7 @@ pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","I
 pc_plot1 <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region)) +
   geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
+  scale_color_manual(values = region.cols) +
   theme_bw() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
 
@@ -544,6 +587,44 @@ Save image
 ggsave(paste0(temp_plot, "nyc_neu_cbp_pca1.png"), nyc_neu_pc_plot1, height = 5, width = 8)
 ```
 
+I would lke to zoom in on that cluster
+```{r}
+nyc_neu_pc12_zoom <- ggplot() +
+  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC1, y=PC2, color = country)) +
+  theme_bw() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2])) +
+  geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2)
+
+# save plot
+#ggsave(paste0(temp_plot, "nyc_neu_pca1_zoom.png"), nyc_neu_pc12_zoom, height = 5, width = 8)
+```
+Looks East to West (PC1) and North to South (PC2)?
+
+We can check that
+```{r}
+nyc_neu_pc1Long_zoom <- ggplot() +
+  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=longitude, y=PC1, color = country)) +
+  theme_bw() +
+  labs(x="longitude", y= paste0("PC1",percentage[1])) +
+  geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=longitude, y=PC1, label = sample_name), max.overlaps = 50, size = 2)
+
+# save plot
+ggsave(paste0(temp_plot, "nyc_neu_pca1Long_zoom.png"), nyc_neu_pc1Long_zoom, height = 5, width = 8)
+```
+
+```{r}
+nyc_neu_pc1Lat_zoom <- ggplot() +
+  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC2, y=latitude, color = country)) +
+  theme_bw() +
+  labs(x=paste0("PC2",percentage[2]), y= "latitude") +
+  geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC2, y=latitude, label = sample_name), max.overlaps = 50, size = 2)
+
+# save plot
+ggsave(paste0(temp_plot, "nyc_neu_pca1Lat_zoom.png"), nyc_neu_pc1Lat_zoom, height = 5, width = 8)
+```
+
+Yeah, I would say so!
+
 ```{r}
 # rough plot
 nyc_neu_pc_plot2 <- ggplot() +
@@ -554,6 +635,8 @@ nyc_neu_pc_plot2 <- ggplot() +
 
 nyc_neu_pc_plot2
 ```
+
+
 ```{r}
 # rough plot
 nyc_neu_pc_plot3 <- ggplot() +
@@ -564,6 +647,19 @@ nyc_neu_pc_plot3 <- ggplot() +
 
 nyc_neu_pc_plot3
 ```
+
+Let's just plot NYC samples on a map.
+```{r}
+ny_map +
+  geom_point(data = subset(pc_info, country = "United States"), aes(x=longitude, y = latitude, color = city))
+  
+```
+The N. European cluster without NYC included is only 22 samples. PLINK will perform PCA with less than 50 samples without being given an allele frequency file because the sample number is too low. I think I should still be able to convert the pruned VCF to bed files and do the conditional ADMIXTURE analysis.
+
+I do not know if that will give me any additional useful information, however. Given how the PCA looks, it seems pretty clear that the NYC samples are most similar to Polish, Russian and Swedish populations, with the New Jersey population being the closest. 
+
+Also, Northern Chinese populations cluster together, while the sample from northeastern China clusters with the sample from Reykjavik.
+
 # Write populations to file
 At this point, it makes sense to generate a key for generalized population structure to use in other analyses.
 Specifically, I am going to use these population groups in the PIXY analyses, and other explorations of comparisons between the populations at the local genomic scale.
