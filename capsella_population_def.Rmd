@@ -43,13 +43,6 @@ Just setting up some colors
 # vik
 "#001260" "#71A7C4" "#D29773" "#590007"
 
-# Roma (geographic regions)
-region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C.Asia"="#023198")
-
-
-# Hawaii (populations) -- chosen
-pop.cols <- c("E_Asia" = "#8C0172", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#B2F2FD")
-
 #managua
 "#FFCE66" "#92463A" "#4D5492" "#80E6FF"
 
@@ -59,13 +52,15 @@ pop.cols <- c("E_Asia" = "#8C0172", "MENA"= "#996330", "N_Europe"= "#7FC55F", "N
 
 "#FFCCFD" "#BC62A8" "#1A1412"  "#6D9636" "#BEFDA5"
 
-
 #glasgow (geographic regions)
 #scico(5, palette = 'glasgow')
 #region_cols <- c("C. Asia" = "#351338", "E. Asia" = "#7E1700", "MENA/Medditeranean" = "#B58B31", "N. Europe" ="#69A3A5", "US" ="#DAD2FF") #super dull on white bg
+```
 
+
+```{r}
 # Roma (geographic regions)
-region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C.Asia"="#023198")
+region.cols <- c("E. Asia" = "#7E1700", "MENA/Mediterranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C. Asia"="#023198")
 
 
 # Hawaii (populations) -- chosen
@@ -94,7 +89,7 @@ pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
 
 # make continent column?
 pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
-                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Medditeranean",
+                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediterranean",
                                       country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
                                       country %in% c("China", "Taiwan") ~ "E. Asia",
                                       country == "United States" ~ "US"))
@@ -124,6 +119,7 @@ Check out the other PCs
 pc_plot2  <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC3, color = region)) +
   geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC3, label = sample_name), size = 2) +
+  scale_color_manual(values = region.cols) +
   theme_bw() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
 
@@ -195,9 +191,16 @@ for (file in lst) {
 
 ```{r}
 # create sample name key from fam file 
-cbp_name_key <- left_join(data.frame(cbp_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name")],
+cbp_name_key <- left_join(data.frame(cbp_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name", "country")],
                          join_by("cbp_fam.V2" == "vcf_sample_name"))
-colnames(cbp_name_key)[1] <- "vcf_sample_name"
+colnames(cbp_name_key)[1] <- "vcf_sample_name" # rename column
+
+# add region to key
+cbp_name_key <- cbp_name_key %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
+                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediterranean",
+                                      country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
+                                      country %in% c("China", "Taiwan") ~ "E. Asia",
+                                      country == "United States" ~ "US"))
 
 # bind fam file to all ADMIXTURE files
 #ea_p <- lapply(ea_ancestry_propsK, transform, vcf_sample_name=ea_fam$V2)
@@ -224,9 +227,8 @@ plotK(cbp_cv)
 Looks like K = 4 has the lowest CV error rate. This makes sense considering we expect about three groups in the ancestral range, plus NYC.
 ```{r}
 # make ancestry bars plot
-#cap_k3 <- ancestry_bars(cap_ancestry_propsK, K = K, sample_names_fam=cap_fam, ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
+cap_k4 <- ancestry_cols(cbp_p, "K4") #ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
 
-cap_k4 <- ancestry_bars2(cbp_p, "K4")
 # plot
 cap_k4
 

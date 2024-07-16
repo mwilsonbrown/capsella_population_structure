@@ -2,7 +2,14 @@
 # Maya Wilson Brown
 # March 11, 2024
 
-###### MAP BASES
+####### Colors --------
+# Roma (geographic regions)
+region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C. Asia"="#023198")
+
+# Hawaii (populations) -- chosen
+pop.cols <- c("E_Asia" = "#8C0172", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#B2F2FD")
+
+###### MAP BASES ---------
 states <- ne_states(returnclass = "sf", country="United States of America")
 
 east <- ne_countries(returnclass = "sf", continent = c("Europe", "Asia", "Africa"))
@@ -25,7 +32,7 @@ world <- ggplot()+ geom_sf(data= whole, fill="gray93")+
   theme_light() + 
   theme(axis.text.x= element_text(size = 5), axis.text.y= element_text(size = 5))
 
-######## DATA ANALYSIS FUNCTIONS
+######## DATA ANALYSIS FUNCTIONS-------
 # Select K
 plotK <- function(cv_error_log){
   cv.plot <- plot(x=cv_error_log$K_groups, y =cv_error_log$V2, ylab = "cross validation error rate", xlab = "K groups")
@@ -128,8 +135,8 @@ assign_ancestry <- function(ancestry_proportion_list, list_element_name){
 }
 
 ######## PLOTTING FUNCTIONS
-# Ancestry Bars Plot
-ancestry_bars2 <- function(ancestry_proportion_list, list_element_name, ggplot_opt = NULL){
+# Ancestry Bars Plot--ordered by geographic region
+ancestry_cols <- function(ancestry_proportion_list, list_element_name, ggplot_opt = NULL){
   # Print selected K and set K
   K = as.numeric(str_extract(list_element_name, "[0-9]+")) # extract only the number from list name and treat as number
   print(paste0("Selected K groups is ", K))
@@ -139,47 +146,48 @@ ancestry_bars2 <- function(ancestry_proportion_list, list_element_name, ggplot_o
   # change column names to vector of various K populations and vcf names
   colnames(ancestry_dat) <- str_replace(colnames(ancestry_dat), "V", "pop")
   
-  # make data long form
-  ad_long <- pivot_longer(ancestry_dat, 
-                          cols = colnames(ancestry_dat)[1:K], 
-                          names_to = "ancestry", 
-                          values_to = "proportion")
-  # order rows by ancestry, then proportion columns
-  anc <- ad_long %>% arrange(desc(ancestry), proportion)
-  # order sample names to be in ancestry proportion order
-  lvl.order <- c(anc[1:nrow(ancestry_dat), "vcf_sample_name"])$vcf_sample_name
-  anc$vcf_sample_name <- factor(anc$vcf_sample_name, levels = lvl.order) # the levels argument here is the one that matters
+  # order region as a factor with specific levels, then arrange them by region
+  ancestry_dat$region <- factor(ancestry_dat$region, levels = c("US","N. Europe", "MENA/Mediterranean", "C. Asia", "E. Asia"))
+  df2 <- ancestry_dat %>% arrange(region)
   
-  # adding ggplot options, for if I want to add custom colors for populations
+  # Set the levels of the vcf sample names based on region order
+  ind.lvl <- df2$vcf_sample_name #get level order that I want (by region)
+  
+  # then pivot longer
+  df3 <- pivot_longer(df2, 
+                      cols = colnames(df2)[1:K], 
+                      names_to = "ancestry", 
+                      values_to = "proportion")
+  # set vcf_sample_name to factor with explicit levels
+  df3$vcf_sample_name <- factor(df3$vcf_sample_name, levels = ind.lvl)
+  
+  #create map (named vector) between vcf_sample_name and sample_name
+  sn <- df3$sample_name
+  names(sn) <- df3$vcf_sample_name
+  
+  ## Plotting
   if(!is.null(ggplot_opt)) {
-    plot <- ggplot(anc, aes(fill=ancestry, y=proportion, x=vcf_sample_name)) + 
-      geom_bar(position="fill", stat="identity") +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 7),legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank()) + 
-      xlab("sample name") + scale_x_discrete(labels=anc$sample_name) + 
+    plot <- ggplot() +
+      geom_col(data=df3, aes(x=vcf_sample_name, y = proportion, fill=ancestry)) +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 7),
+            legend.position="none",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank()) +
+      scale_x_discrete(labels=sn) + 
       ggplot_opt
   } else {
-    plot <- ggplot(anc, aes(fill=ancestry, y=proportion, x=vcf_sample_name)) + 
-      geom_bar(position="fill", stat="identity") +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 7),legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank()) + 
-      xlab("sample name") + scale_x_discrete(labels=anc$sample_name)
+    plot <- ggplot() +
+      geom_col(data=df3, aes(x=vcf_sample_name, y = proportion, fill=ancestry)) +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 7),
+            legend.position="none",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank()) +
+      scale_x_discrete(labels=sn)
   }
   return(plot)
-  return(anc)
+  return(df3)
+  
 }
-# 
-# # Viterbi decoded ancestry columns plot for a single scaffold
-# viterbi_columns_plot <- function(df, scaffold_num, k4vsNY_population){
-#   pl <- ggplot() + geom_segment(data = subset(df, (chrom == paste0("SCF_", scaffold_num) & k4vsNY_pop == k4vsNY_population)),
-#                           aes(color= ancestry, x=vcf_sample_name, xend=vcf_sample_name, y=start, yend=end),
-#                           linewidth = 8) + 
-#     scale_color_manual(values=anc.cols) + 
-#     ggtitle(paste(k4vsNY_population, ": Scaffold", scaffold_num)) + 
-#     ylab("position") + xlab("Sample Name") + 
-#     theme(panel.grid.major = element_blank(), 
-#           panel.grid.minor = element_blank(), 
-#           panel.background = element_blank(), 
-#           axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 10))
-#   return(pl)
-# }
-
 
