@@ -12,6 +12,7 @@ library(stringr)
 library(dplyr)
 library(rnaturalearth) # for maps
 library(scico) # colors
+library(scatterpie) # pie charts on maps
 ```
 
 I have written functions for the plots I want and selecting K.
@@ -98,8 +99,8 @@ pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","I
 ```{r pc1_pc2}
 # rough plot
 pc_plot1 <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region)) +
-  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
+  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region), size = 3) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 4) +
   scale_color_manual(values = region.cols) +
   theme_bw() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
@@ -233,7 +234,7 @@ cap_k4 <- ancestry_cols(cbp_p, "K4") #ggplot_opt = scale_fill_manual(values = c(
 cap_k4
 
 ```
-
+This make NYC appear as its own group, while a majority of samples from Northern Europe
 ```{r save cbp image}
 # save image
 ggsave(paste0(temp_plot,"cbp_k4.png"), cap_k4, width = 13, height = 7, units = "in")
@@ -248,10 +249,10 @@ I do feel that is analysis has already been done by Kryvohkhyzha and colleagues 
 
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-ea_fam <- read.delim(paste0(admix_dir, "eurasian_pruned_cbp.fam"), header=FALSE)
+ea_fam <- read.delim(paste0(admix_dir, "new_nyc/eurasian_pruned_cbp.fam"), header=FALSE)
 
 # list the files in admixture directory matching suffix pattern
-lst <- list.files(path = admix_dir, pattern = "eurasian_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
+lst <- list.files(path = paste0(admix_dir,"new_nyc"), pattern = "eurasian_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
 
 ea_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
 #loop to load sample data
@@ -263,9 +264,18 @@ for (file in lst) {
 
 ```{r}
 # create sample name key from fam file 
-ea_name_key <- left_join(data.frame(ea_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name")],
+ea_name_key <- left_join(data.frame(ea_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name", "country")],
                          join_by("ea_fam.V2" == "vcf_sample_name"))
 colnames(ea_name_key)[1] <- "vcf_sample_name"
+
+# add region to key
+ea_name_key <- ea_name_key %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
+                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediterranean",
+                                      country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
+                                      country %in% c("China", "Taiwan") ~ "E. Asia",
+                                      country == "United States" ~ "US"))
+
+
 
 # bind fam file to all ADMIXTURE files
 #ea_p <- lapply(ea_ancestry_propsK, transform, vcf_sample_name=ea_fam$V2)
@@ -291,7 +301,7 @@ plotK(ea_cv)
 
 ```{r eurasian k2, eval=FALSE}
 # data for k = 2 on Eurasian group
-ea_k2 <- ancestry_bars2(ea_p, "K2")
+ea_k2 <- ancestry_cols(ea_p, "K2")
 
 #ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"))
 
@@ -304,15 +314,15 @@ ggsave(paste0(temp_plot,"eurasian_cbp_k2.png"), ea_k2, width = 13, height = 7, u
 Same but for K=3 and K=4
 ```{r}
 # data for k = 2 on Eurasian group
-ea_k3 <- ancestry_bars2(ea_p, "K3")
+ea_k3 <- ancestry_cols(ea_p, "K3", ggplot_opt = scale_fill_manual(values= c("pop2" = "#8C0172", "pop3"= "#996330", "pop1"= "#7FC55F", "NYC"= "#B2F2FD")))
 # make just the plot show up
-plot(ea_k3)
-ggsave(paste0(temp_plot,"eurasian_cbp_k3.png"), ea_k3, width = 13, height = 7, units = "in")
+plot(ea_k3[[1]])
+#ggsave(paste0(temp_plot,"eurasian_cbp_k3.png"), ea_k3, width = 13, height = 7, units = "in")
 ```
 
 ```{r}
 # data for k = 2 on Eurasian group
-ea_k4 <- ancestry_bars2(ea_p, "K4")
+ea_k4 <- ancestry_cols(ea_p, "K4", ggplot_opt = )
 # make just the plot show up
 plot(ea_k4)
 ggsave(paste0(temp_plot,"eurasian_cbp_k4.png"), ea_k4, width = 13, height = 7, units = "in")
@@ -351,12 +361,13 @@ ea_k3_ancestryL <- left_join(ea_k3_ancestry, vcf_dat[c("vcf_sample_name","sample
 
 ```{r}
 # world map
-ea_k3_map <- eurasia + geom_point(data=ea_k3_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) #+
-  #scale_fill_manual(name = "Group", values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"), labels = c("East Asian", "European"))
+ea_k3_map <- eurasia + geom_point(data=ea_k3_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) +
+  scale_fill_manual(values= c("pop2" = "#8C0172", "pop3"= "#996330", "pop1"= "#7FC55F", "NYC"= "#B2F2FD"),
+                    labels = c("pop2"= "E. Asian", pop3 = "Mediterranean", "pop1" = "N. Eurasian"))
 
 ea_k3_map
 
-ggsave(paste0(temp_plot, "eurasian_k3_bigDots.png"),ea_k3_map, width = 13, height = 7, units = "in")
+#ggsave(paste0(temp_plot, "eurasian_k3_bigDots.png"),ea_k3_map, width = 13, height = 7, units = "in")
 ```
 Suspicions confirmed: there are two main populations in the ancestral range; one is in southern and eastern Asia, while the other is mostly in Europe and northwestern China with some overlap.
 
@@ -381,6 +392,16 @@ ea_k4_map <- eurasia + geom_point(data=ea_k4_ancestryL, aes(x=longitude, y=latit
 ea_k4_map
 
 ggsave(paste0(temp_plot, "eurasian_k4_bigDots.png"),ea_k4_map, width = 13, height = 7, units = "in")
+```
+
+Trying to get a similar plot with scatterpie
+```{r}
+# set up data frame; no longer need to assign major ancestry
+ea_k4_ancestryL <- left_join(ea_p[["K4"]], vcf_dat[c("vcf_sample_name","sample_name",
+                                                 "longitude","latitude","latlong_approx")])
+
+ggplot() + geom_scatterpie(data=ea_k4_ancestryL, aes(x=longitude, y = latitude), cols=paste0("V", 1:4),
+                                                    alpha = 0.6)
 ```
 
 From the **Projection analysis** section of the ADMIXTURE manual:
@@ -419,10 +440,10 @@ So that is pretty useful.
 ###### Plot results of projected admixtures
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-nyc_fam <- read.delim(paste0(admix_dir, "nyc_pruned_cbp.fam"), header=FALSE)
+nyc_fam <- read.delim(paste0(admix_dir, "new_nyc/nyc_pruned_cbp.fam"), header=FALSE)
 
 # list the files in admixture directory matching suffix pattern
-lst <- list.files(path = admix_dir, pattern = "nyc_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
+lst <- list.files(path = paste0(admix_dir, "new_nyc"), pattern = "nyc_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
 
 nyc_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
 #loop to load sample data
@@ -434,9 +455,15 @@ for (file in lst) {
 
 ```{r}
 # create sample name key from fam file 
-nyc_name_key <- left_join(data.frame(nyc_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name")],
+nyc_name_key <- left_join(data.frame(nyc_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name", "country")],
                          join_by("nyc_fam.V2" == "vcf_sample_name"))
 colnames(nyc_name_key)[1] <- "vcf_sample_name"
+# add region to key
+nyc_name_key <- nyc_name_key %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
+                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediterranean",
+                                      country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
+                                      country %in% c("China", "Taiwan") ~ "E. Asia",
+                                      country == "United States" ~ "US"))
 
 # bind fam file to all ADMIXTURE files
 #nyc_p <- lapply(nyc_ancestry_propsK, transform, vcf_sample_name=nyc_fam$V2)
@@ -451,8 +478,6 @@ rm(nyc_ancestry_propsK)
 # data for k = 2 on Eurasian group
 nyc_k2 <- ancestry_bars2(nyc_p, "K2")
 
-#ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"))
-
 # make just the plot show up
 plot(nyc_k2)
 
@@ -462,11 +487,12 @@ ggsave(paste0(temp_plot,"nyc_cbp_k2.png"), nyc_k2, width = 13, height = 7, units
 Same but for K=3 and K=4
 ```{r}
 # data for k = 2 on Eurasian group
-nyc_k3 <- ancestry_bars2(nyc_p, "K3")
+nyc_k3 <- ancestry_cols(nyc_p, "K3",ggplot_opt = scale_fill_manual(values= c("pop2" = "#8C0172", "pop3"= "#996330", "pop1"= "#7FC55F", "NYC"= "#B2F2FD")))
 # make just the plot show up
-plot(nyc_k3)
-ggsave(paste0(temp_plot,"nyc_cbp_k3.png"), nyc_k3, width = 13, height = 7, units = "in")
+plot(nyc_k3[[1]])
+#ggsave(paste0(temp_plot,"nyc_cbp_k3.png"), nyc_k3, width = 13, height = 7, units = "in")
 ```
+Something is up here with the colors. Should be mostly green.
 
 Since the mapped plot of only NYC will not be that interesting, I will combine the Eurasian and NYC data frames to make a map.
 ```{r}

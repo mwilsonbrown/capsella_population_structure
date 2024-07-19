@@ -27,23 +27,27 @@ I will first load in the vcf metadata
 vcf_meta <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
 
+Then I will load the actual data for inviduals in the VCF after filtering
+```{r}
+# load individuals in the final filtered version of the VCF
+invcf <- read.csv("~/Documents/PhD/Research/vcf_filtering/individuals/j19_in_vcf.txt",
+                  header = F)
+
+# join the information
+vcf_dat <- left_join(invcf, vcf_meta, join_by("V1" == "vcf_sample_name"))
+```
+
 VCF information: I only want Capsella bursa-pastoris ones so, I will just select those
 ```{r}
 # collect only cbp
-cbp <- vcf_meta[vcf_meta$species == "Capsella bursa-pastoris",]
-
-# remove F2s, parents, and "pool" because I do not know what that is
-cbp <- cbp[str_detect(cbp$sample_name, "F2", negate = T),] #remove rows with F2 in the sample_name
-
-# remove parents and pool
-cbp <- cbp[str_detect(cbp$sample_name, "pool", negate = T),]
-cbp <- cbp[str_detect(cbp$sample_name, "parent", negate = T),]
+cbp <- vcf_dat[vcf_dat$species == "Capsella bursa-pastoris",]
 ```
 
 Finally, write to table for use on HPCC.
 ```{r all Capsella bursa-pastoris in VCF}
 #write C. bursa-pastoris VCF names to list
-write.table(cbp$vcf_sample_name, "~/Downloads/vcf_cbp_only_0625_2024.txt", quote = F, sep = "\t", row.names = F, col.names = F)
+write.table(cbp$V1, "~/Documents/PhD/Research/capsella_population_structure/all_cbp.txt",
+            quote = F, sep = "\t", row.names = F, col.names = F)
 ```
 
 # Conditioning ancestry proportions on clusters in a reference panel -- projection analysis
@@ -65,11 +69,15 @@ eurasia <- subset(cbp, !(sample_name %in% c("WAC5", nyc$sample_name)))
 
 ```{r}
 # write both datasets to file
-write.table(nyc$vcf_sample_name, "~/Downloads/vcf_cbp_nyc.txt", quote = F, sep = "\t", row.names = F, col.names = F)
+write.table(nyc$V1, "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_nyc.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 
-write.table(eurasia$vcf_sample_name, "~/Downloads/vcf_cbp_eurasia.txt", quote = F, sep = "\t", row.names = F, col.names = F)
+write.table(eurasia$V1, "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_eurasia.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 ```
 
+```{bash, code = readLines("runConditionalAdmixture.R")}
+```
+
+###### No longer needed code?
 
 ```{bash}
 #!/bin/bash

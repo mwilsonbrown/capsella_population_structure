@@ -170,7 +170,7 @@ ancestry_cols <- function(ancestry_proportion_list, list_element_name, ggplot_op
     plot <- ggplot() +
       geom_col(data=df3, aes(x=vcf_sample_name, y = proportion, fill=ancestry)) +
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 7),
-            legend.position="none",
+            legend.position="bottom",
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             panel.background = element_blank()) +
@@ -180,14 +180,13 @@ ancestry_cols <- function(ancestry_proportion_list, list_element_name, ggplot_op
     plot <- ggplot() +
       geom_col(data=df3, aes(x=vcf_sample_name, y = proportion, fill=ancestry)) +
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 7),
-            legend.position="none",
+            legend.position="bottom",
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             panel.background = element_blank()) +
       scale_x_discrete(labels=sn)
   }
-  return(plot)
-  return(df3)
+  return(list(plot, df3))
   
 }
 
