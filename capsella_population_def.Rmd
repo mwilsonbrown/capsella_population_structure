@@ -23,7 +23,7 @@ source("~/Documents/PhD/Research/capsella_population_structure/capsella_pop_def_
 
 ```{r directory variables}
 # load data directory
-admix_dir <- "~/Documents/PhD/Research/capsella_population_structure/data/"
+admix_dir <- "~/Documents/PhD/Research/capsella_population_structure/new_admix_dat/"
 temp_plot <- "~/Documents/PhD/Research/capsella_population_structure/temp_plots/"
 plot_dir <- "~/Documents/PhD/Research/capsella_population_structure/plots/"
 ```
@@ -100,7 +100,7 @@ pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","I
 # rough plot
 pc_plot1 <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region), size = 3) +
-  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 4) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 4, max.overlaps = 20) +
   scale_color_manual(values = region.cols) +
   theme_bw() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
@@ -249,10 +249,10 @@ I do feel that is analysis has already been done by Kryvohkhyzha and colleagues 
 
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-ea_fam <- read.delim(paste0(admix_dir, "new_nyc/eurasian_pruned_cbp.fam"), header=FALSE)
+ea_fam <- read.delim(paste0(admix_dir, "eurasian_pruned_cbp.fam"), header=FALSE)
 
 # list the files in admixture directory matching suffix pattern
-lst <- list.files(path = paste0(admix_dir,"new_nyc"), pattern = "eurasian_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
+lst <- list.files(path = admix_dir, pattern = "eurasian_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
 
 ea_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
 #loop to load sample data
@@ -440,10 +440,10 @@ So that is pretty useful.
 ###### Plot results of projected admixtures
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-nyc_fam <- read.delim(paste0(admix_dir, "new_nyc/nyc_pruned_cbp.fam"), header=FALSE)
+nyc_fam <- read.delim(paste0(admix_dir, "nyc_pruned_cbp.fam"), header=FALSE)
 
 # list the files in admixture directory matching suffix pattern
-lst <- list.files(path = paste0(admix_dir, "new_nyc"), pattern = "nyc_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
+lst <- list.files(path = admix_dir, pattern = "nyc_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
 
 nyc_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
 #loop to load sample data
@@ -481,7 +481,7 @@ nyc_k2 <- ancestry_bars2(nyc_p, "K2")
 # make just the plot show up
 plot(nyc_k2)
 
-ggsave(paste0(temp_plot,"nyc_cbp_k2.png"), nyc_k2, width = 13, height = 7, units = "in")
+#ggsave(paste0(temp_plot,"nyc_cbp_k2.png"), nyc_k2, width = 13, height = 7, units = "in")
 ```
 
 Same but for K=3 and K=4

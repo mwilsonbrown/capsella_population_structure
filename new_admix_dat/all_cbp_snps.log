@@ -1,0 +1,31 @@
+PLINK v2.00a3.7 SSE4.2 (24 Oct 2022)
+Options in effect:
+  --allow-extra-chr
+  --indep-pairwise 100 5 0.2
+  --keep /mnt/home/wils1582/capsella_population_structure/all_cbp.txt
+  --out all_cbp_snps
+  --set-all-var-ids @:#
+  --vcf /mnt/scratch/wils1582/july15/CBP_CRCG_final_filtered.vcf.gz
+
+Hostname: lac-209
+Working directory: /mnt/gs21/scratch/wils1582/EvConfAnalyses/admixture_out
+Start time: Sat Jul 20 03:53:18 2024
+
+Random number seed: 1721461998
+128011 MiB RAM detected; reserving 64005 MiB for main workspace.
+Using 1 compute thread.
+--vcf: 6140655 variants scanned.
+--vcf: all_cbp_snps-temporary.pgen + all_cbp_snps-temporary.pvar.zst +
+all_cbp_snps-temporary.psam written.
+257 samples (0 females, 0 males, 257 ambiguous; 257 founders) loaded from
+all_cbp_snps-temporary.psam.
+6140655 variants loaded from all_cbp_snps-temporary.pvar.zst.
+Note: No phenotype data present.
+--keep: 134 samples remaining.
+134 samples (0 females, 0 males, 134 ambiguous; 134 founders) remaining after
+main filters.
+Calculating allele frequencies... done.
+--indep-pairwise (1 compute thread): 5705193/6140655 variants removed.
+Variant lists written to all_cbp_snps.prune.in and all_cbp_snps.prune.out .
+
+End time: Sat Jul 20 03:55:26 2024
