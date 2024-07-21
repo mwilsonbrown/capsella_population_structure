@@ -698,12 +698,12 @@ The most useful and informative clustering is when K=3, so I will use that to de
 
 ```{r}
 # create descriptive column for ancestral range population groups
-k3Pops <- ea_k3_ancestryL %>% mutate(k3population = case_when(group == "pop1" ~ "N_Europe",
+k3Pops <- k3_ancestry %>% mutate(k3population = case_when(group == "pop1" ~ "N_Europe",
                                                          group == "pop2" ~ "E_Asia",
                                                          group == "pop3" ~ "MENA"))
 ```
 
 Now I will write the data population data to file
 ```{r save cbp population file, eval=FALSE}
-write.table(k3Pops[c("vcf_sample_name","sample_name","k3population", "latitude", "longitude", "latlong_approx")], file = "~/Documents/PhD/Research/capsella_population_structure/cbp_pop_str.txt", col.names = T, row.names = F, quote = F, sep = "\t")
+write.table(k3Pops[c("vcf_sample_name","sample_name","k3population")], file = "~/Documents/PhD/Research/capsella_population_structure/cbp_pop_str.txt", col.names = T, row.names = F, quote = F, sep = "\t")
 ```
