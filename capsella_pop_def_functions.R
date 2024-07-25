@@ -7,7 +7,7 @@
 region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C. Asia"="#023198")
 
 # Hawaii (populations) -- chosen
-pop.cols <- c("E_Asia" = "#8C0172", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#B2F2FD")
+pop.cols <- c("E_Asia" = "#B2F2FD", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#585380")
 
 ###### MAP BASES ---------
 states <- ne_states(returnclass = "sf", country="United States of America")
@@ -174,7 +174,7 @@ ancestry_cols <- function(ancestry_proportion_list, list_element_name, ggplot_op
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             panel.background = element_blank()) +
-      scale_x_discrete(labels=sn) + 
+      scale_x_discrete(labels=sn) +
       ggplot_opt
   } else {
     plot <- ggplot() +
