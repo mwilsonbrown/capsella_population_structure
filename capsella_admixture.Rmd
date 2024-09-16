@@ -74,6 +74,37 @@ write.table(nyc$V1, "~/Documents/PhD/Research/capsella_population_structure/vcf_
 write.table(eurasia$V1, "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_eurasia.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 ```
 
+From the **Projection analysis** section of the ADMIXTURE manual:
+> ADMIXTURE now allows loading of learned allele frequencies from the .P files. For two
+datasets with the same set of SNPs, clusters can be learned using the unsupervised mode
+of ADMIXTURE on the first dataset; subsequently, the learned clusters and ancestry
+proportions from the first dataset can be provided as input used to project the second
+dataset with the -P option.
+Example: Suppose reference.bed is the PLINK binary file containing reference panels
+and study.bed is the PLINK binary file containing study samples. The following sequence
+of commands can be used to learn population structure from the reference panel and project
+the study individuals on it:
+# Verify the two datasets have the same set of SNPs
+% diff -s reference.bim study.bim
+# Run unsupervised ADMIXTURE with K=2
+% admixture reference.bed 2
+# Use learned allele frequencies as (fixed) input to next step
+% cp reference.2.P study.2.P.in
+# Run projection ADMIXTURE with K=2
+% admixture -P study.bed 2
+
+>The projection approach is particularly useful when the study sample is much larger than
+the reference panel. When the study sample is comparable in size to the reference panel,
+it may be preferable to run unsupervised ADMIXTURE on the combined set since the
+running time scales linearly with the number of samples.
+
+>The same approach can also be used for inferring ancestry on a set of related individuals.
+Pedigree information or existing methods such as PLINK [5], KING [6] or PRIMUS [7] can
+be used to identify the largest subset of unrelated individuals in the dataset. ADMIXTURE
+is then run unsupervised on the largest set of unrelated individuals (using that as the
+reference set in the example above). The rest of the individuals (who can be related to the
+reference set) can then be projected on the resulting population structure.
+
 ```{bash, code = readLines("runConditionalAdmixture.R")}
 ```
 

@@ -4,7 +4,7 @@
 
 ####### Colors --------
 # Roma (geographic regions)
-region.cols <- c("E. Asia" = "#7E1700", "MENA/Medditeranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C. Asia"="#023198")
+region.cols <- c("E. Asia" = "#7E1700", "MENA/Mediteranean"= "#B58B31", "N. Europe"= "#C0E9C2", "US"= "#389CC6","C. Asia"="#023198")
 
 # Hawaii (populations) -- chosen
 pop.cols <- c("E_Asia" = "#B2F2FD", "MENA"= "#996330", "N_Europe"= "#7FC55F", "NYC"= "#585380")

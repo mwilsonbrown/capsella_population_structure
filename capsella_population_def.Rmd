@@ -12,7 +12,7 @@ library(stringr)
 library(dplyr)
 library(rnaturalearth) # for maps
 library(scico) # colors
-library(scatterpie) # pie charts on maps
+#library(scatterpie) # pie charts on maps
 ```
 
 I have written functions for the plots I want and selecting K.
@@ -33,31 +33,6 @@ plot_dir <- "~/Documents/PhD/Research/capsella_population_structure/plots/"
 vcf_dat <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
 
-# Colors
-Just setting up some colors
-```{r, eval=F}
-# roma
-"#7E1700" "#AC7726""#88D9D7" "#023198"
-# Roma (geographic regions)
-"#7E1700" "#B58B31" "#C0E9C2" "#389CC6" "#023198"
-
-# vik
-"#001260" "#71A7C4" "#D29773" "#590007"
-
-#managua
-"#FFCE66" "#92463A" "#4D5492" "#80E6FF"
-
-
-# Bursa-pastoris to rubella range (vanimo)
-"#FFCCFD" "#5B244E" "#354819" "#BEFDA5"
-
-"#FFCCFD" "#BC62A8" "#1A1412"  "#6D9636" "#BEFDA5"
-
-#glasgow (geographic regions)
-#scico(5, palette = 'glasgow')
-#region_cols <- c("C. Asia" = "#351338", "E. Asia" = "#7E1700", "MENA/Medditeranean" = "#B58B31", "N. Europe" ="#69A3A5", "US" ="#DAD2FF") #super dull on white bg
-```
-
 # Capsella bursa-pastoris Principle Components -- All Populations
 ```{r pca eigenstuff}
 # read in eigenvec and eigenval data
@@ -65,8 +40,7 @@ vec <- read.csv(paste0(admix_dir, "all_pruned_cbp.eigenvec"), sep = "\t", header
 
 val <-  read.csv(paste0(admix_dir, "all_pruned_cbp.eigenval"), sep = "\t", header = F) #PC variances explained
 
-
-# percantage of variance explained by each PC
+# percentage of variance explained by each PC
 percentage <- round((val/(sum(val))*100), 2)
 percentage <- as.matrix(percentage)
 percentage <- paste0(names(percentage), " (", percentage, "%)")
@@ -76,28 +50,22 @@ percentage <- paste0(names(percentage), " (", percentage, "%)")
 # match individual IDs to informative data
 pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
 
-# make continent column?
+# make continent column, just for colors
+# Biologically, not that important because I am arbitrarily assigning a geographic region based on the country name
 pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
-                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediterranean",
+                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediteranean",
                                       country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
                                       country %in% c("China", "Taiwan") ~ "E. Asia",
                                       country == "United States" ~ "US"))
 ```
 
 ```{r pc1_pc2}
-# rough plot
-# pc_plot1 <- ggplot() +
-#   geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region), size = 3) +
-#   geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 4, max.overlaps = 20) +
-#   scale_color_manual(values = region.cols) +
-#   theme_bw() +
-#   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
-
 pc_plot1 <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region), size = 3,
              alpha = 0.7) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
   scale_color_manual(values = region.cols) +
-  theme_bw() +
+  theme_classic() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
 
 pc_plot1
@@ -105,7 +73,7 @@ pc_plot1
 
 ```{r}
 # save plot
-ggsave(paste0(temp_plot, "all_cbp_pca1.png"), pc_plot1, height = 5, width = 8)
+ggsave(paste0(plot_dir  , "all_cbp_pca1.png"), pc_plot1, height = 5, width = 8)
 ```
 
 
@@ -113,20 +81,23 @@ Check out the other PCs
 ```{r pc1_pc3}
 # rough plot
 pc_plot2  <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = region)) +
+  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = region), size = 3) +
   geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC3, label = sample_name), size = 2) +
   scale_color_manual(values = region.cols) +
-  theme_bw() +
+  theme_classic() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
 
 
 #plot it
 pc_plot2
-# save plot
-ggsave(paste0(temp_plot, "all_cbp_pca2.png"), pc_plot2, height = 5, width = 8)
 ```
 
-It seems like PC1 largely captures the US and Northern Europe population separating out from everyone else, and PC2 is picking up on the Mediterranean populations.
+```{r}
+# save plot
+ggsave(paste0(plot_dir, "all_cbp_pca2.png"), pc_plot2, height = 5, width = 8)
+```
+
+It seems like PC1 largely captures the US and Northern Europe population separating out from everyone else, and PC2 is picking up on the Mediterranean populations from the larger East Asian group.
 
 Now let's look within NY.
 ```{r pca eigenstuff}
@@ -153,7 +124,7 @@ nyc_pc_plot1 <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC2, color = city)) +
   geom_text_repel(data= subset(pc_info, city %in% c("New York", "Brooklyn", "Queens", "Flushing (Queens)")), aes(x=PC1, y=PC2, label = population), size = 3) +
   theme_classic() +
-  scale_color_scico_d(palette = "managua")
+  scale_color_scico_d(palette = "managua") +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
 
 nyc_pc_plot1
@@ -162,86 +133,41 @@ nyc_pc_plot1
 Save image
 ```{r}
 # save plot
-ggsave(paste0(temp_plot, "nyc_cbp_pca1.png"), nyc_pc_plot1, height = 3, width = 6)
+ggsave(paste0(plot_dir, "nyc_cbp_pca1.png"), nyc_pc_plot1, height = 3, width = 6)
 ```
 
 For NYC, PC1 is capturing variation driven by population 24 (New Jersey), while pc2 is capturing variation driven by population 14 (Jerico).
 
-# Capsella population admixture results and cluster assignment
-Plotting and recording the admixture analysis in *Capsella bursa-pastoris* for analyzing group differences in introgressed regions
-
-Load in the ADMIXTURE output data
-```{r import admixture output files}
-# read in the PLINK fam file which has the sample name information in the same order as the admixture output files
-cbp_fam <- read.delim(paste0(admix_dir, "all_pruned_cbp.fam"), header=FALSE)
-
-# list the files in admixture directory matching suffix pattern
-lst <- list.files(path = admix_dir, pattern = "all_pruned_cbp.[0-9]+.Q") # Q files are ancestry fractions for each sample
-
-cbp_ancestry_propsK <- list()  # Create an empty list to store the data for each iteration of K groups
-#loop to load sample data
-for (file in lst) {
-  file_path <- file.path(admix_dir, file)  # Get the full file path
-  cbp_ancestry_propsK[[file]] <- read.table(file_path, header = F)  # Read the file and store in the list
-}
+Is there spatial structure to PC2 or PC3 in NYC?
+```{r}
+ny_map + geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC2), size = 3, alpha = 0.8)
 ```
 
 ```{r}
-# create sample name key from fam file 
-cbp_name_key <- left_join(data.frame(cbp_fam$V2), vcf_dat[,c("vcf_sample_name", "sample_name", "country")],
-                         join_by("cbp_fam.V2" == "vcf_sample_name"))
-colnames(cbp_name_key)[1] <- "vcf_sample_name" # rename column
-
-# add region to key
-cbp_name_key <- cbp_name_key %>% mutate(region = case_when(country %in% c("Switzerland","Iceland","Netherlands","Poland","Germany","Sweden","United Kingdom","France") ~ "N. Europe",
-                                      country %in% c("Spain", "Greece", "Italy","Jordan", "Algeria","Turkey") ~ "MENA/Mediterranean",
-                                      country %in% c("Kyrgyzstan", "Russia") ~ "C. Asia",
-                                      country %in% c("China", "Taiwan") ~ "E. Asia",
-                                      country == "United States" ~ "US"))
-
-# bind fam file to all ADMIXTURE files
-#ea_p <- lapply(ea_ancestry_propsK, transform, vcf_sample_name=ea_fam$V2)
-cbp_p <- Map(cbind, cbp_ancestry_propsK, list(cbp_name_key))
-
-# name list elements by the K groups they represent
-names(cbp_p) <- paste0("K",str_extract(names(cbp_p), "[0-9]+"))
-rm(cbp_ancestry_propsK)
+ggplot()+ geom_sf(data= states, fill="gray93")+ 
+  coord_sf(xlim = c(-74.5, -73),  ylim = c(40.5, 41), expand = FALSE) + 
+  geom_point(data = pc_info, aes(x=longitude, y= latitude), fill = PC2)
+  theme_light() + 
+  theme(axis.text.x= element_text(size = 5), axis.text.y= element_text(size = 5)) +
+  
 ```
 
-
-Now to look at the cross validation error rates
-```{r cv_error K groups}
-# read in Cross Validation (cv) error log
-cbp_cv <- read.delim(paste0(admix_dir, "all_cbp_cv_error.log"), header = FALSE, sep = ":")
-# extract K groups from string
-cbp_cv$K_groups <- str_extract(cbp_cv$V1, "[0-9]+")
-
-# Plot
-plotK(cbp_cv)
-```
-
-
-Looks like K = 4 has the lowest CV error rate. This makes sense considering we expect about three groups in the ancestral range, plus NYC.
 ```{r}
-# make ancestry bars plot
-cap_k4 <- ancestry_cols(cbp_p, "K4") #ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "#E64B35FF", "pop3" = "orchid1")))
+# rough plot
+nyc_pc_plot2 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = city)) +
+  geom_text_repel(data= subset(pc_info, city %in% c("New York", "Brooklyn", "Queens", "Flushing (Queens)")), aes(x=PC1, y=PC3, label = population), size = 3) +
+  theme_classic() +
+  scale_color_scico_d(palette = "managua") +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
 
-# plot
-cap_k4
-
-```
-This make NYC appear as its own group, while a majority of samples from Northern Europe
-```{r save cbp image}
-# save image
-ggsave(paste0(temp_plot,"cbp_k4.png"), cap_k4, width = 13, height = 7, units = "in")
+nyc_pc_plot2
 ```
 
 
 #### ADMIXTURE conditioned on K
 
-If we just think about ADMIXTURE and STRUCTURE as ways to select a valuable K number of ancestral groups, it makes sense to run admixture on the Eurasian C. bursa-pastoris samples on their own, and select the best K groups from the ancestral population. Then, using that K, I would run ADMIXTURE on only the NYC populations and assign the NYC population to those K ancestral groups. I am not sure of the best way to match between the populations, but I may just have to look at the allele frequencies in the inferred ancestral populations and match them that way.
-
-I do feel that is analysis has already been done by Kryvohkhyzha and colleagues to some capacity.
+If we just think about ADMIXTURE and STRUCTURE as ways to select a valuable K number of ancestral groups, it makes sense to run admixture on the Eurasian *C. bursa-pastoris* samples on their own, and select the best K groups from the ancestral population. Then, using that K, I would run ADMIXTURE on only the NYC populations and assign the NYC population to those K ancestral groups.
 
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
@@ -295,32 +221,29 @@ plotK(ea_cv)
 #K = selectK(ea_cv)
 ```
 
-```{r eurasian k2, eval=FALSE}
-# data for k = 2 on Eurasian group
-ea_k2 <- ancestry_cols(ea_p, "K2", ggplot_opt = scale_fill_manual(values= c("pop1" = "#B2F2FD", "pop3"= "#996330", "pop2"= "#7FC55F")))
-
-#ggplot_opt = scale_fill_manual(values = c("pop1" = "#4DBBD5FF", "pop2" = "orange"))
-
-# make just the plot show up
-plot(ea_k2[[1]])
-
-#ggsave(paste0(temp_plot,"eurasian_cbp_k2.png"), ea_k2[[1]], width = 13, height = 5, units = "in")
-```
-
-Same but for K=3 and K=4
 ```{r}
 # data for k = 2 on Eurasian group
-ea_k3 <- ancestry_cols(ea_p, "K3", ggplot_opt = scale_fill_manual(values= c("pop2" = "#B2F2FD", "pop3"= "#996330", "pop1"= "#7FC55F")))
+ea_k3 <- ancestry_cols(ea_p, "K3", ggplot_opt = scale_fill_manual(values= c("pop2" = "#B2F2FD", "pop3"= "#996330", "pop1"= "#7FC55F"),
+                                                                  labels = c("pop2" = "E. Asia",
+                                                                             "pop3" = "MENA/Mediterranean",
+                                                                             "pop1" = "N. Eurasia")))
 # make just the plot show up
 plot(ea_k3[[1]])
-ggsave(paste0(temp_plot,"eurasian_cbp_k3_legend_bottom.png"), ea_k3[[1]], width = 13, height = 5, units = "in")
+
 ```
 
 ```{r}
+ggsave(paste0(plot_dir,"eurasian_admix_k3_legend_bottom.png"), ea_k3[[1]], width = 13, height = 5, units = "in")
+```
+
+```{r, eval = F, echo=FALSE}
 # data for k = 2 on Eurasian group
 ea_k5 <- ancestry_cols(ea_p, "K5")
 # make just the plot show up
 plot(ea_k5[[1]])
+```
+
+```{r, eval=FALSE, echo=FALSE}
 ggsave(paste0(temp_plot,"eurasian_cbp_k5.png"), ea_k5[[1]], width = 13, height = 5, units = "in")
 ```
 
@@ -339,104 +262,38 @@ ea_k3_ancestryL <- left_join(ea_k3_ancestry, vcf_dat[c("vcf_sample_name","sample
 # world map
 ea_k3_map <- eurasia + geom_point(data=ea_k3_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
   scale_color_manual(values= c("pop2" = "#99D9E4", "pop3"= "#996330", "pop1"= "#7FC55F"),
-                    labels = c("pop2"= "E. Asian", pop3 = "Mediterranean", "pop1" = "N. Eurasian")) + scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17))
+                    labels = c("pop2"= "E. Asia", pop3 = "MENA/Mediterranean", "pop1" = "N. Eurasia")) + scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17))
 
 ea_k3_map
-
-ggsave(paste0(temp_plot, "eurasian_k3_bigDots.png"),ea_k3_map, width = 13, height = 7, units = "in")
 ```
-With new colors
 ```{r}
-# world map
-ea_k3_map <- eurasia + geom_point(data=ea_k3_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
-  scale_color_manual(values= c("pop2" = "#99D9E4", "pop3"= "#996330", "pop1"= "#7FC55F"),
-                    labels = c("pop2"= "E. Asian", pop3 = "Mediterranean", "pop1" = "N. Eurasian")) + scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17))
-
-ea_k3_map
-
-ggsave(paste0(temp_plot, "eurasian_k3_bigDots_newCols.png"),ea_k3_map, width = 13, height = 7, units = "in")
+ggsave(paste0(plot_dir, "eurasian_k3_map.png"),ea_k3_map, width = 13, height = 7, units = "in")
 ```
 
-I would also like the map showing the 5 samples that were selected from the E. Asian population
-```{r}
-ea_k3_map <- eurasia + geom_point(data=subset(ea_k3_ancestryL, sample_name %in% c("DL174", "HJC419","LJ5", "LL761", "NE2")), aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
-  scale_color_manual(values= c("pop2" = "#99D9E4", "pop3"= "#996330", "pop1"= "#7FC55F"),
-                    labels = c("pop2"= "E. Asian", pop3 = "Mediterranean", "pop1" = "N. Eurasian")) + scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17))
-
-ea_k3_map
-
-ggsave(paste0(temp_plot, "eurasian_k3_bigDots_withheld.png"),ea_k3_map, width = 13, height = 7, units = "in")
-```
-
-~~Suspicions confirmed: there are two main populations in the ancestral range; one is in southern and eastern Asia, while the other is mostly in Europe and northwestern China with some overlap.~~
-
-Given the original population structure inferred at the very top of this document, this suggests a few things: 
-- 2 populations / ancestry groups are most likely. The reason k=3 and k=4 show lower cross validation error rates is probably due to the European, northwestern Chinese cluster being overwhelmed by the number of New York individuals and *their* allele frequencies
-- The European/ northwestern Chinese cluster at the top of the document appears largely admixed with a Mediterranean-like cluster. Again, that is probably not real population structure, but due to the New York City samples overwhelming the allele frequency patterns. Therefore, I suspect that there has been a mild bottleneck from the European population into New York and New Jersey.
-
-K = 4 just out of curiosity
 
 ```{r}
 # assign sample to majority ancestry
-ea_k4_ancestry <- assign_ancestry(ea_p, "K4")
+ea_k5_ancestry <- assign_ancestry(ea_p, "K5")
 
 # join with location data
-ea_k4_ancestryL <- left_join(ea_k4_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
+ea_k5_ancestryL <- left_join(ea_k5_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
                                                  "longitude","latitude","latlong_approx")])
 ```
 
 ```{r}
-ea_k4_map <- eurasia + geom_point(data=ea_k4_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) 
+ea_k5_map <- eurasia + geom_point(data=ea_k5_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
+  scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17)) 
 
-ea_k4_map
-
-ggsave(paste0(temp_plot, "eurasian_k4_bigDots.png"),ea_k4_map, width = 13, height = 7, units = "in")
+ea_k5_map
 ```
 
-Trying to get a similar plot with scatterpie
+
 ```{r}
-# set up data frame; no longer need to assign major ancestry
-ea_k4_ancestryL <- left_join(ea_p[["K4"]], vcf_dat[c("vcf_sample_name","sample_name",
-                                                 "longitude","latitude","latlong_approx")])
-
-ggplot() + geom_scatterpie(data=ea_k4_ancestryL, aes(x=longitude, y = latitude), cols=paste0("V", 1:4),
-                                                    alpha = 0.6)
+ggsave(paste0(temp_plot, "eurasian_k5_map.png"),ea_k4_map, width = 13, height = 7, units = "in")
 ```
 
-From the **Projection analysis** section of the ADMIXTURE manual:
-> ADMIXTURE now allows loading of learned allele frequencies from the .P files. For two
-datasets with the same set of SNPs, clusters can be learned using the unsupervised mode
-of ADMIXTURE on the first dataset; subsequently, the learned clusters and ancestry
-proportions from the first dataset can be provided as input used to project the second
-dataset with the -P option.
-Example: Suppose reference.bed is the PLINK binary file containing reference panels
-and study.bed is the PLINK binary file containing study samples. The following sequence
-of commands can be used to learn population structure from the reference panel and project
-the study individuals on it:
-# Verify the two datasets have the same set of SNPs
-% diff -s reference.bim study.bim
-# Run unsupervised ADMIXTURE with K=2
-% admixture reference.bed 2
-# Use learned allele frequencies as (fixed) input to next step
-% cp reference.2.P study.2.P.in
-# Run projection ADMIXTURE with K=2
-% admixture -P study.bed 2
 
->The projection approach is particularly useful when the study sample is much larger than
-the reference panel. When the study sample is comparable in size to the reference panel,
-it may be preferable to run unsupervised ADMIXTURE on the combined set since the
-running time scales linearly with the number of samples.
-
->The same approach can also be used for inferring ancestry on a set of related individuals.
-Pedigree information or existing methods such as PLINK [5], KING [6] or PRIMUS [7] can
-be used to identify the largest subset of unrelated individuals in the dataset. ADMIXTURE
-is then run unsupervised on the largest set of unrelated individuals (using that as the
-reference set in the example above). The rest of the individuals (who can be related to the
-reference set) can then be projected on the resulting population structure.
-
-So that is pretty useful.
-
-###### Plot results of projected admixtures
+### NYC Metro population structure conditional on Eurasian allele frequency
 ```{r import admixture output files}
 # read in the PLINK fam file which has the sample name information in the same order as the admixture output files
 nyc_fam <- read.delim(paste0(admix_dir, "nyc_pruned_cbp.fam"), header=FALSE)
@@ -473,13 +330,19 @@ names(nyc_p) <- paste0("K",str_extract(names(nyc_p), "[0-9]+"))
 rm(nyc_ancestry_propsK)
 ```
 
-Same but for K=3 and K=4
+
 ```{r}
 # data for k = 2 on Eurasian group
-nyc_k3 <- ancestry_cols(nyc_p, "K3",ggplot_opt = scale_fill_manual(values= c("pop2" = "#B2F2FD", "pop3"= "#996330", "pop1"= "#7FC55F")))
+nyc_k3 <- ancestry_cols(nyc_p, "K3",ggplot_opt = scale_fill_manual(values= c("pop2" = "#B2F2FD", "pop3"= "#996330", "pop1"= "#7FC55F"),
+                                                                   labels = c("pop2" = "E. Asia",
+                                                                             "pop3" = "MENA/Mediterranean",
+                                                                             "pop1" = "N. Eurasia")))
 # make just the plot show up
 plot(nyc_k3[[1]])
-ggsave(paste0(temp_plot,"nyc_cbp_k3.png"), nyc_k3[[1]], width = 13, height = 5, units = "in")
+```
+
+```{r}
+ggsave(paste0(plot_dir,"nyc_cbp_k3.png"), nyc_k3[[1]], width = 13, height = 5, units = "in")
 ```
 
 Prep data for NYC map
@@ -490,65 +353,40 @@ nyc_k3_ancestry <- assign_ancestry(nyc_p, "K3")
 # join with location data
 nyc_k3_ancestryL <- left_join(nyc_k3_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
                                                  "longitude","latitude","latlong_approx", "city")])
-
-#nyc_k3_ancestryL$population <- factor(nyc_k3_ancestryL$population)
 ```
 
 Just a map colored by population for explaining the dataset
 ```{r}
-nyc_pops_map <- ny_map + geom_point(data=nyc_k3_ancestryL, aes(x=longitude, y=latitude, color = city), size = 3, alpha = 0.8) + scale_color_scico_d(palette = "managua") + geom_text_repel(data= subset(nyc_k3_ancestryL, city %in% c("New York", "Brooklyn", "Queens", "Flushing (Queens)")), aes(x=PC1, y=PC2, label = population), size = 2)
+nyc_pops_map <- ny_map + geom_point(data=nyc_k3_ancestryL, aes(x=longitude, y=latitude, color = city), size = 3, alpha = 0.8) + scale_color_scico_d(palette = "managua")
 
-ggsave(paste0(temp_plot,"nyc_pops_map.png"),nyc_pops_map, width = 7, height = 3, units = "in")
+nyc_pops_map
+```
+
+```{r}
+ggsave(paste0(plot_dir,"nyc_pops_map.png"),nyc_pops_map, width = 7, height = 3, units = "in")
 ```
 
 
 Since the mapped plot of only NYC will not be that interesting, I will combine the Eurasian and NYC data frames to make a map.
 ```{r}
-# assign majority ancestry to nyc data frames
-nyc_k2_ancestry <- assign_ancestry(nyc_p, "K2")
-nyc_k3_ancestry <- assign_ancestry(nyc_p, "K3")
-nyc_k4_ancestry <- assign_ancestry(nyc_p, "K4")
-
 # combine Eurasian and NYC data frames
-k2_ancestry <- rbind(ea_k2_ancestry, nyc_k2_ancestry)
 k3_ancestry <- rbind(ea_k3_ancestry, nyc_k3_ancestry)
-k4_ancestry <- rbind(ea_k4_ancestry, nyc_k4_ancestry)
 
 # join with location data
-k2_ancestryL <- left_join(k2_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
-                                                 "longitude","latitude","latlong_approx")])
 k3_ancestryL <- left_join(k3_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
                                                  "longitude","latitude","latlong_approx")])
-k4_ancestryL <- left_join(k4_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
-                                                 "longitude","latitude","latlong_approx")])
-
-
-```
-
-Final maps of this conditional clumping
-```{r}
-cond_k2_map <- world + geom_point(data=k2_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) 
-
-cond_k2_map
-
-ggsave(paste0(temp_plot, "cond_k2_bigDots.png"),cond_k2_map, width = 13, height = 7, units = "in")
 ```
 
 ```{r}
 cond_k3_map <- world + geom_point(data=k3_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) 
 
 cond_k3_map
-
-ggsave(paste0(temp_plot, "cond_k3_bigDots.png"),cond_k3_map, width = 13, height = 7, units = "in")
 ```
 
 ```{r}
-cond_k4_map <- world + geom_point(data=k4_ancestryL, aes(x=longitude, y=latitude, fill = group, color = latlong_approx), shape=21, size = 7) 
-
-cond_k4_map
-
-ggsave(paste0(temp_plot, "cond_k4_bigDots.png"),cond_k4_map, width = 13, height = 7, units = "in")
+ggsave(paste0(temp_plot, "cond_k3_bigDots.png"),cond_k3_map, width = 13, height = 7, units = "in")
 ```
+
 With all of the above plots, the East Asian population always stands out. There is evidence that there is more continuous structure or some sort of gradient moving from the Mediterranean region, through central Asia (Kyrgyzstan).
 
 This is also good evidence that we can use some individuals from the East Asian group as a parental population in the local ancestry inference.
@@ -558,7 +396,11 @@ Regardless of whether K=2,3, or 4, there are always 33 individuals that are in t
 # NYC and European with/out MENA 
 Seeing as the NYC individuals seems to clearly have a lot of shared variation with the Northern European group, it is worth seeing how NYC individuals partition into this group.
 
-I think given the number of NYC individuals, I may try to condition their admixture proportions on Northern European alone. I am not sure how useful it would be to see the NYC individuals form their own cluster, but I will run that as well.
+The N. Eurasian cluster *without NYC included* is only 22 samples. PLINK will not perform PCA with less than 50 samples without being given an allele frequency file because the sample number is too low. I think I should still be able to convert the pruned VCF to bed files and do the conditional ADMIXTURE analysis.
+
+I do not know if that will give me any additional useful information, however. Given how the PCA looks, it seems pretty clear that the NYC samples are most similar to Polish, Russian and Swedish populations, with the New Jersey population being the closest. 
+
+Also, Northern Chinese populations cluster together, while the sample from northeastern China clusters with the sample from Reykjavik.
 
 **NOTE:** Originally, I included Mediterranean/Middle Eastern,North African individuals in the analysis, but it became clear that was not useful or informative since they form their own cluster quite removed from the N. Europe and NYC individuals.
 
@@ -566,7 +408,6 @@ For the following analyses, I only include samples that have majority N. Europea
 
 Plan:
 - PCA with NYC + N. Europe
-- Admixture in NYC conditioned on allele frequencies in N. EU + Mena (K=1,2,3,4,5)
 - Admixture free on NYC + N.EU (to see if the CV error rates suggest NYC wants to cluster on its own)
   - if NYC does cluster on its own freely with N.EU, that *could* suggest there's been quite a bit of allele frequency change across continents **OR** the NYC group is just large and it popping out as its own cluster could be an artifact of over fitting (? but I really do not know if that matters and would have to look at the documentation for ADMIXTURE)
 
@@ -589,9 +430,9 @@ Starting with PCA of NYC with N. European group (minus wt-msu).
 
 ```{r pca eigenstuff}
 # read in eigenvec and eigenval data
-vec <- read.csv(paste0(admix_dir, "nyc_neu/nyc_neu_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
+vec <- read.csv(paste0("~/Documents/PhD/Research/capsella_population_structure/admix_out_data/", "nyc_neu/nyc_neu_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
 
-val <-  read.csv(paste0(admix_dir, "nyc_neu/nyc_neu_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
+val <-  read.csv(paste0("~/Documents/PhD/Research/capsella_population_structure/admix_out_data/", "nyc_neu/nyc_neu_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
 
 
 # percantage of variance explained by each PC
@@ -608,10 +449,10 @@ pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
 ```{r}
 # rough plot
 nyc_neu_pc_plot1 <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = country)) +
-  theme_bw() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2])) +
-  geom_text_repel(data=subset(pc_info, country != "United States"), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2)
+  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = country), size = 3, alpha = 0.75) +
+  scale_color_discrete(labels = c("United States" = "NYC Metro")) +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
 
 nyc_neu_pc_plot1
 ```
@@ -620,19 +461,23 @@ PC1 seems to separate some of the Chinese plants from the rest, while PC2 cluste
 Save image
 ```{r}
 # save plot
-ggsave(paste0(temp_plot, "nyc_neu_cbp_pca1.png"), nyc_neu_pc_plot1, height = 5, width = 8)
+ggsave(paste0(plot_dir, "nyc_neu_cbp_pca1.png"), nyc_neu_pc_plot1, height = 5, width = 8)
 ```
 
-I would lke to zoom in on that cluster
+I would like to zoom in on that cluster
 ```{r}
-nyc_neu_pc12_zoom <- ggplot() +
-  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC1, y=PC2, color = country)) +
-  theme_bw() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2])) +
-  geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2)
+nyc_neu_pc_plot1_zoom <- ggplot() +
+  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC1, y=PC2, color = country),
+             size = 3, alpha = 0.75) +
+  scale_color_discrete(labels = c("United States" = "NYC Metro")) +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
 
-# save plot
-#ggsave(paste0(temp_plot, "nyc_neu_pca1_zoom.png"), nyc_neu_pc12_zoom, height = 5, width = 8)
+nyc_neu_pc_plot1_zoom
+```
+
+```{r}
+ggsave(paste0(plot_dir, "nyc_neu_pca1_zoom.png"), nyc_neu_pc_plot1_zoom, height = 5, width = 8)
 ```
 Looks East to West (PC1) and North to South (PC2)?
 
@@ -644,6 +489,10 @@ nyc_neu_pc1Long_zoom <- ggplot() +
   labs(x="longitude", y= paste0("PC1",percentage[1])) +
   geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=longitude, y=PC1, label = sample_name), max.overlaps = 50, size = 2)
 
+nyc_neu_pc1Long_zoom
+```
+
+```{r}
 # save plot
 ggsave(paste0(temp_plot, "nyc_neu_pca1Long_zoom.png"), nyc_neu_pc1Long_zoom, height = 5, width = 8)
 ```
@@ -655,41 +504,16 @@ nyc_neu_pc1Lat_zoom <- ggplot() +
   labs(x=paste0("PC2",percentage[2]), y= "latitude") +
   geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC2, y=latitude, label = sample_name), max.overlaps = 50, size = 2)
 
+nyc_neu_pc1Lat_zoom
+```
+
+```{r}
 # save plot
 ggsave(paste0(temp_plot, "nyc_neu_pca1Lat_zoom.png"), nyc_neu_pc1Lat_zoom, height = 5, width = 8)
 ```
 
-Yeah, I would say so!
+Yeah, I might say so.
 
-```{r}
-# rough plot
-nyc_neu_pc_plot2 <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = country)) +
-  theme_bw() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3])) +
-  geom_text_repel(data=subset(pc_info, country != "United States"), aes(x=PC1, y=PC3, label = sample_name), max.overlaps = 50, size = 2)
-
-nyc_neu_pc_plot2
-```
-
-
-```{r}
-# rough plot
-nyc_neu_pc_plot3 <- ggplot() +
-  geom_point(data=pc_info, aes(x=PC2, y=PC3, color = country)) +
-  theme_bw() +
-  labs(x=paste0("PC2",percentage[2]), y= paste0("PC3",percentage[3])) +
-  geom_text_repel(data=subset(pc_info, country != "United States"), aes(x=PC2, y=PC3, label = sample_name), max.overlaps = 50, size = 2)
-
-nyc_neu_pc_plot3
-```
-
-Let's just plot NYC samples on a map.
-```{r}
-ny_map +
-  geom_point(data = subset(pc_info, country = "United States"), aes(x=longitude, y = latitude, color = city))
-  
-```
 The N. European cluster without NYC included is only 22 samples. PLINK will perform PCA with less than 50 samples without being given an allele frequency file because the sample number is too low. I think I should still be able to convert the pruned VCF to bed files and do the conditional ADMIXTURE analysis.
 
 I do not know if that will give me any additional useful information, however. Given how the PCA looks, it seems pretty clear that the NYC samples are most similar to Polish, Russian and Swedish populations, with the New Jersey population being the closest. 
