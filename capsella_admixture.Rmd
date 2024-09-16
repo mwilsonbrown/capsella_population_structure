@@ -10,7 +10,7 @@ Admixture analysis of global *Capsella bursa-pastoris* samples.
 ### Selecting C. bursa-pastoris samples from VCF
 
 First, I will compare all potential samples to samples that made it into the final VCF
-```{bash, eval = F}
+```{bash, eval = F, echo = FALSE}
 # on HPCC
 cd /mnt/research/josephslab/Maya/capsella/vcf/adrian_vcf/
 # get sample names from VCF
@@ -22,13 +22,12 @@ library(stringr)
 library(dplyr)
 ```
 
-I will first load in the vcf metadata
 ```{r}
+# load vcf metadata
 vcf_meta <- read.csv("~/Documents/PhD/Research/capsella_sample_info/generated_mkwb/Capsella_vcf_metadata.txt", sep = "\t", header = T)
 ```
 
-Then I will load the actual data for inviduals in the VCF after filtering
-```{r}
+```{r, eval =FALSE}
 # load individuals in the final filtered version of the VCF
 invcf <- read.csv("~/Documents/PhD/Research/vcf_filtering/individuals/j19_in_vcf.txt",
                   header = F)
@@ -36,15 +35,12 @@ invcf <- read.csv("~/Documents/PhD/Research/vcf_filtering/individuals/j19_in_vcf
 # join the information
 vcf_dat <- left_join(invcf, vcf_meta, join_by("V1" == "vcf_sample_name"))
 ```
-
-VCF information: I only want Capsella bursa-pastoris ones so, I will just select those
-```{r}
+```{r, eval=FALSE}
 # collect only cbp
 cbp <- vcf_dat[vcf_dat$species == "Capsella bursa-pastoris",]
 ```
 
-Finally, write to table for use on HPCC.
-```{r all Capsella bursa-pastoris in VCF}
+```{r all Capsella bursa-pastoris in VCF, eval=FALSE}
 #write C. bursa-pastoris VCF names to list
 write.table(cbp$V1, "~/Documents/PhD/Research/capsella_population_structure/all_cbp.txt",
             quote = F, sep = "\t", row.names = F, col.names = F)
@@ -58,24 +54,25 @@ This requires that the same SNP set be in both datasets. So I will mark SNPs in 
 I also need to make a list of NYC and Eurasian samples. I know that WAC5 is the only other sample in North America that is not from NYC (aside from the reference which could be from Reno?? It does not have location data associated, and in the PCA, it stands out quite a lot so I will remove it).
 
 First, to make the data sets that will go into this analysis
-```{r}
+```{r, eval=FALSE}
 # selecting NYC only samples
 nyc <- cbp[which(cbp$citation == "R.Panko"),]
 
-# eurasian samples, also removing WAC5 becaue it is not in Eurasia
+# eurasian samples, also removing WAC5 because it is not in Eurasia
 # WAC5 is from Waco, Texas
 eurasia <- subset(cbp, !(sample_name %in% c("WAC5", nyc$sample_name)))
 ```
 
-```{r}
+```{r, eval=FALSE}
 # write both datasets to file
 write.table(nyc$V1, "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_nyc.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 
 write.table(eurasia$V1, "~/Documents/PhD/Research/capsella_population_structure/vcf_cbp_eurasia.txt", quote = F, sep = "\t", row.names = F, col.names = F)
 ```
 
-From the **Projection analysis** section of the ADMIXTURE manual:
-> ADMIXTURE now allows loading of learned allele frequencies from the .P files. For two
+From the **Projection analysis** section of the [ADMIXTURE 1.3 manual](https://dalexander.github.io/admixture/admixture-manual.pdf):
+
+>ADMIXTURE now allows loading of learned allele frequencies from the .P files. For two
 datasets with the same set of SNPs, clusters can be learned using the unsupervised mode
 of ADMIXTURE on the first dataset; subsequently, the learned clusters and ancestry
 proportions from the first dataset can be provided as input used to project the second
@@ -84,14 +81,17 @@ Example: Suppose reference.bed is the PLINK binary file containing reference pan
 and study.bed is the PLINK binary file containing study samples. The following sequence
 of commands can be used to learn population structure from the reference panel and project
 the study individuals on it:
-# Verify the two datasets have the same set of SNPs
-% diff -s reference.bim study.bim
-# Run unsupervised ADMIXTURE with K=2
-% admixture reference.bed 2
-# Use learned allele frequencies as (fixed) input to next step
-% cp reference.2.P study.2.P.in
-# Run projection ADMIXTURE with K=2
-% admixture -P study.bed 2
+
+```{bash, eval = F}
+ #Verify the two datasets have the same set of SNPs
+ diff -s reference.bim study.bim
+ #Run unsupervised ADMIXTURE with K=2
+ admixture reference.bed 2
+ #Use learned allele frequencies as (fixed) input to next step
+ cp reference.2.P study.2.P.in
+ #Run projection ADMIXTURE with K=2
+ admixture -P study.bed 2
+```
 
 >The projection approach is particularly useful when the study sample is much larger than
 the reference panel. When the study sample is comparable in size to the reference panel,
@@ -105,209 +105,5 @@ is then run unsupervised on the largest set of unrelated individuals (using that
 reference set in the example above). The rest of the individuals (who can be related to the
 reference set) can then be projected on the resulting population structure.
 
-```{bash, code = readLines("runConditionalAdmixture.R")}
-```
-
-###### No longer needed code?
-
-```{bash}
-#!/bin/bash
-#
-#SBATCH --job-name=EUAconditionalAdmix
-#SBATCH --nodes=10
-#SBATCH --cpus-per-task=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --time=0-15:00:00
-#SBATCH --partition=josephsnodes
-#SBATCH --account=josephsnodes
-#SBATCH --mem=10G
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=wils1582@msu.edu
-#SBATCH --output=/mnt/scratch/wils1582/slurm/slurm-%A_%a.out
-
-### VARIABLES
-VCF=/mnt/research/josephslab/Maya/capsella/vcf/adrian_vcf/final_filtered/CBPCRCG_filtered.vcf.gz
-OUTDIR=/mnt/research/josephslab/Maya/capsella/admixture/
-EA_SAMPLES=/mnt/research/josephslab/Maya/capsella/admixture/vcf_cbp_eurasia.txt
-NYC_SAMPLES=/mnt/research/josephslab/Maya/capsella/admixture/vcf_cbp_nyc.txt
-ALL_CBP=/mnt/research/josephslab/Maya/capsella/admixture/vcf_cbp_only_0613_2024.txt
-
-# move to directory
-cd $OUTDIR
-
-#load modules
-module purge
-module load PLINK/2.00a_10.2-x86_64
-module load ADMIXTURE/1.3.0
-
-#### LD Prune and output BED
-# Identify SNPs in LD
-# Parameters consider SNPs in 100 snp windows, cutoff is and r^2 correlation of 0.2 between a pair of SNPs, and then calculates again after moving 5 SNPs
-plink2 --vcf $VCF \
-	     --indep-pairwise 100 5 0.2 \
-	     --keep $ALL_CBP \
-	--allow-extra-chr \
-	--out all_cbp_snps \
-	--set-all-var-ids @:#
-
-# Prune LD SNPs
-# Variant IDs set to be 'scaffold:position'
-# ADMIXTURE requires the input be in PLINK .bed format, so here I create the bed file as well.
-  
-# Prune Eurasian CBP
-plink2 --vcf $VCF \
-  --extract all_cbp_snps.prune.in \
-  --make-bed \
-  --out eurasian_pruned_cbp \
-	--allow-extra-chr \
-	--keep $EA_SAMPLES \
-	--set-all-var-ids @:# \
-	--pca
-  
-# Prune New York/New Jersey CBP
-plink2 --vcf $VCF \
-  --extract all_cbp_snps.prune.in \
-  --make-bed \
-  --out nyc_pruned_cbp \
-	--allow-extra-chr \
-	--keep $NYC_SAMPLES \
-	--set-all-var-ids @:# \
-	--pca
-	
-# Check if the .bim files are the same
-diff -s eurasian_pruned_cbp.bim nyc_pruned_cbp.bim
-
-# ADMIXTURE only takes chromosomes as numbers so in all the PLINK output files, jlSCF_ needs to be removed
-sed -i 's/^jlSCF_//g' eurasian_pruned_cbp.bed
-sed -i 's/^jlSCF_//g' eurasian_pruned_cbp.bim
-sed -i 's/^jlSCF_//g' eurasian_pruned_cbp.fam
-
-#do the same for NYC files
-sed -i 's/^jlSCF_//g' nyc_pruned_cbp.bed
-sed -i 's/^jlSCF_//g' nyc_pruned_cbp.bim
-sed -i 's/^jlSCF_//g' nyc_pruned_cbp.fam
-
-# also change the names of the final two contigs to be numeric only; makes them called 21 and 22
-sed -i 's/^contig_/2/g' eurasian_pruned_cbp.bed
-sed -i 's/^contig_/2/g'	eurasian_pruned_cbp.bim
-sed -i 's/^contig_/2/g'	eurasian_pruned_cbp.fam
-
-sed -i 's/^contig_/2/g' nyc_pruned_cbp.bed
-sed -i 's/^contig_/2/g'	nyc_pruned_cbp.bim
-sed -i 's/^contig_/2/g'	nyc_pruned_cbp.fam
-
-# Run unsupervised ADMIXTURE with K=2
-admixture eurasian_pruned_cbp.bed 2
-
-# Use learned allele frequencies as (fixed) input to next step
-cp eurasian_pruned_cbp.2.P nyc_pruned_cbp.2.P.in
-
-# Run projection ADMIXTURE with K=2
-admixture -P nyc_pruned_cbp.bed 2
-
-### K = 3
-# Run unsupervised ADMIXTURE with K=3
-admixture eurasian_pruned_cbp.bed 3
-
-# Use learned allele frequencies as (fixed) input to next step
-cp eurasian_pruned_cbp.3.P nyc_pruned_cbp.3.P.in
-
-# Run projection ADMIXTURE with K=3
-admixture -P nyc_pruned_cbp.bed 3
-
-### K = 4
-# Run unsupervised ADMIXTURE with K=4
-admixture eurasian_pruned_cbp.bed 4
-
-# Use learned allele frequencies as (fixed) input to next step
-cp eurasian_pruned_cbp.4.P nyc_pruned_cbp.4.P.in
-
-# Run projection ADMIXTURE with K=4
-admixture -P nyc_pruned_cbp.bed 4
-```
-
-
-# I no longer do this analysis for now
-I want do redo the admixture analysis with only samples in the European group (which precipitates out of the admixture analysis with all the *Capsella bursa-pastoris* above)
-```{r, eval = FALSE}
-# list of individuals who have over 60% ancestry in European group when k=3
-eu_cbp <- read.table("~/Downloads/eu_cbp_k3.txt", quote="\"", comment.char="", header = F)
-```
-
-```{r}
-# 
-```
-
-### Admixture analysis
-Admixture assumed independence of variants, so we need to LD prune the SNPs.
-Full Script below
-
-```{bash LD prune admixture}
-#!/bin/bash
-#
-#SBATCH --job-name=LDpruneAdmixture
-#SBATCH --mem=10G
-#SBATCH --time=5:00:00         #realistically, shouldn't take very long
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=wils1582@msu.edu
-#SBATCH --cpus-per-task=15
-#SBATCH --output=/mnt/scratch/wils1582/slurm/slurm-%A_%a.out
-
-### VARIABLES
-VCF=/mnt/research/josephslab/Maya/capsella/vcf/adrian_vcf/final_filtered/CBPCRCG_filtered.vcf.gz
-SAMPLES=/mnt/research/josephslab/Maya/capsella/admixture/vcf_cbp_only_0613_2024.txt
-NYC=/mnt/research/josephslab/Maya/capsella/admixture/vcf_cbp_only_0613_2024.txt
-EUAS=/mnt/research/josephslab/Maya/capsella/admixture/vcf_cbp_only_0613_2024.txt
-OUTDIR=/mnt/research/josephslab/Maya/capsella/admixture/
-
-# move to directory
-cd $OUTDIR
-
-#load modules
-module purge
-module load PLINK/2.00a_10.2-x86_64
-module load ADMIXTURE/1.3.0
-
-#### LD Prune and output BED
-# Identify SNPs in LD
-# Parameters mark SNPs
-plink2 --vcf $VCF \
-	--indep-pairwise 100 5 0.2 \
-	--keep $SAMPLES \
-	--allow-extra-chr \
-	--out pruned_snps \
-	--set-all-var-ids @:#
-
-# Prune LD SNPs
-# Variant IDs set to be 'scaffold:position'
-# ADMIXTURE requires the input be in PLINK .bed format, so here I create the bed file as well.
-plink2 --vcf $VCF \
-  --extract pruned_snps.prune.in \
-  --make-bed \
-  --out all_cbp \
-	--allow-extra-chr \
-	--set-all-var-ids @:# \
-	--keep $SAMPLES \
-	--pca
-
-# ADMIXTURE only takes chromosomes as numbers so in all the PLINK output files, jlSCF_ needs to be removed
-sed -i 's/^jlSCF_//g' all_cbp.bed
-sed -i 's/^jlSCF_//g' all_cbp.bim
-sed -i 's/^jlSCF_//g' all_cbp.fam
-
-# also change the names of the final two contigs to be numeric only; makes them called 21 and 22
-sed -i 's/^contig_/2/g' all_cbp.bed
-sed -i 's/^contig_/2/g'	all_cbp.bim
-sed -i 's/^contig_/2/g'	all_cbp.fam
-
-####### ADMIXTURE
-# move to directory (double check)
-cd /mnt/research/josephslab/Maya/capsella/admixture
-
-# admixture run with cross validation
-for K in 1 2 3 4 5 6 7 8 9; \
-	do admixture --cv all_cbp.bed $K | tee log${K}.out; done
-
-#print cross validation error rates
-grep -h CV log*.out > all_cbp_cv_error.log
+```{bash, code = readLines("~/Documents/PhD/Research/capsella_population_structure/runConditionalAdmixture.sh"), eval = FALSE}
 ```
