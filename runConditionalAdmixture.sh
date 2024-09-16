@@ -12,6 +12,11 @@
 #SBATCH --mail-user=wils1582@msu.edu
 #SBATCH --output=/mnt/scratch/wils1582/slurm/slurm-%A_%a.out
 
+# Performs LD pruning on all Capsella bursa-pastoris
+# Does PCA on all Capsella bursa-pastoris and C. bursa-pastoris from NYC only
+# Calculates admixture proportions in Eurasia
+# Calculates NYC admicture proportions conditional on Eurasian allele frequencies
+
 ### VARIABLES
 VCF=/mnt/scratch/wils1582/july15/CBP_CRCG_final_filtered.vcf.gz
 OUTDIR=/mnt/scratch/wils1582/EvConfAnalyses/admixture_out
@@ -25,11 +30,12 @@ cd $OUTDIR
 #load modules
 module purge
 ml PLINK/2.00a3.7-gfbf-2023a ADMIXTURE/1.3.0
+
 #### LD Prune and output BED
 # Identify SNPs in LD
-# Parameters consider SNPs in 100 snp windows, cutoff is and r^2 correlation of 0.2 between a pair of SNPs, and then calculates again after moving 5 SNPs
+# Parameters consider SNPs in 100kb windows, cutoff is and r^2 correlation of 0.1 between a pair of SNPs, and then calculates again after moving 5 SNPs
 plink2 --vcf $VCF \
-	     --indep-pairwise 100 5 0.2 \
+	     --indep-pairwise 100 kb 1 0.1 \
 	     --keep $ALL_CBP \
 	--allow-extra-chr \
 	--out all_cbp_snps \
