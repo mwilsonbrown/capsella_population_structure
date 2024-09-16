@@ -12,7 +12,6 @@ library(stringr)
 library(dplyr)
 library(rnaturalearth) # for maps
 library(scico) # colors
-#library(scatterpie) # pie charts on maps
 ```
 
 I have written functions for the plots I want and selecting K.
@@ -143,14 +142,6 @@ Is there spatial structure to PC2 or PC3 in NYC?
 ny_map + geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC2), size = 3, alpha = 0.8)
 ```
 
-```{r}
-ggplot()+ geom_sf(data= states, fill="gray93")+ 
-  coord_sf(xlim = c(-74.5, -73),  ylim = c(40.5, 41), expand = FALSE) + 
-  geom_point(data = pc_info, aes(x=longitude, y= latitude), fill = PC2)
-  theme_light() + 
-  theme(axis.text.x= element_text(size = 5), axis.text.y= element_text(size = 5)) +
-  
-```
 
 ```{r}
 # rough plot
@@ -430,9 +421,9 @@ Starting with PCA of NYC with N. European group (minus wt-msu).
 
 ```{r pca eigenstuff}
 # read in eigenvec and eigenval data
-vec <- read.csv(paste0("~/Documents/PhD/Research/capsella_population_structure/admix_out_data/", "nyc_neu/nyc_neu_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
+vec <- read.csv(paste0(admix_dir, "nyc_neu_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
 
-val <-  read.csv(paste0("~/Documents/PhD/Research/capsella_population_structure/admix_out_data/", "nyc_neu/nyc_neu_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
+val <-  read.csv(paste0(admix_dir, "nyc_neu_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
 
 
 # percantage of variance explained by each PC
