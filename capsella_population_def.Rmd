@@ -20,7 +20,7 @@ We can source the functions from capsella_pop_introgression_functions.R
 source("~/Documents/PhD/Research/capsella_population_structure/capsella_pop_def_functions.R")
 ```
 
-```{r directory variables}
+```{r git ectory variables}
 # load data directory
 admix_dir <- "~/Documents/PhD/Research/capsella_population_structure/new_admix_dat/"
 temp_plot <- "~/Documents/PhD/Research/capsella_population_structure/temp_plots/"
