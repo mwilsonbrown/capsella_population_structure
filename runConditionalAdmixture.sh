@@ -18,13 +18,14 @@
 # Calculates NYC admicture proportions conditional on Eurasian allele frequencies
 
 ### VARIABLES
-VCF=/mnt/scratch/wils1582/july15/CBP_CRCG_final_filtered.vcf.gz
-OUTDIR=/mnt/scratch/wils1582/EvConfAnalyses/admixture_out
+VCF=/mnt/research/josephslab/Maya/CBP_CRCGCONP_filtered.vcf.gz
+OUTDIR=/mnt/scratch/wils1582/admixture_out
 EA_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_eurasia.txt
 NYC_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_nyc.txt
 ALL_CBP=/mnt/home/wils1582/capsella_population_structure/all_cbp.txt
 
 # move to directory
+#mkdir -p $OUTDIR
 cd $OUTDIR
 
 #load modules
@@ -33,13 +34,16 @@ ml PLINK/2.00a3.7-gfbf-2023a ADMIXTURE/1.3.0
 
 #### LD Prune and output BED
 # Identify SNPs in LD
-# Parameters consider SNPs in 100kb windows, cutoff is and r^2 correlation of 0.1 between a pair of SNPs, and then calculates again after moving 5 SNPs
+# Parameters consider SNPs in 250kb windows, cutoff is and r^2 correlation of 0.125 between a pair of SNPs. Step size is 1 because PLINK2.0 says so
+# since I specified the window size in kilobases
 plink2 --vcf $VCF \
-	     --indep-pairwise 100 kb 1 0.1 \
-	     --keep $ALL_CBP \
+	--maf 0.025 \
+	--indep-pairwise 250 kb 1 0.125 \
+	--keep $ALL_CBP \
 	--allow-extra-chr \
 	--out all_cbp_snps \
-	--set-all-var-ids @:# \
+	--set-all-var-ids @:# 
+
 # Prune LD SNPs
 # Variant IDs set to be 'scaffold:position'
 # ADMIXTURE requires the input be in PLINK .bed format, so here I create the bed file as well.
