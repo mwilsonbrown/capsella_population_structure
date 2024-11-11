@@ -36,8 +36,10 @@ ml PLINK/2.00a3.7-gfbf-2023a ADMIXTURE/1.3.0
 ## Identify SNPs in LD
 ## Parameters consider SNPs in 250kb windows, cutoff is and r^2 correlation of 0.125 between a pair of SNPs. Step size is 1 because PLINK2.0 says so
 ## since I specified the window size in kilobases
+
+# Now doing 500 snps with 50 step size, and r^2 of 0.5 from Shirsekar et. al. 2021
 plink2 --vcf $VCF \
-	--indep-pairwise 250kb 0.125 \
+	--indep-pairwise 500 50 0.5 \
 	--keep $ALL_CBP \
 	--allow-extra-chr \
 	--out all_cbp_snps \
