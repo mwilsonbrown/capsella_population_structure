@@ -20,7 +20,7 @@ We can source the functions from capsella_pop_introgression_functions.R
 source("~/Documents/PhD/Research/capsella_population_structure/capsella_pop_def_functions.R")
 ```
 
-```{r git ectory variables}
+```{r directory variables}
 # load data directory
 admix_dir <- "~/Documents/PhD/Research/capsella_population_structure/new_admix_dat/"
 temp_plot <- "~/Documents/PhD/Research/capsella_population_structure/temp_plots/"
@@ -72,7 +72,7 @@ pc_plot1
 
 ```{r}
 # save plot
-ggsave(paste0(plot_dir  , "all_cbp_pca1.png"), pc_plot1, height = 5, width = 8)
+ggsave(paste0(plot_dir, "all_cbp_pca1.png"), pc_plot1, height = 5, width = 8)
 ```
 
 Alternate version for Emily's talk with NYC in pink
@@ -154,7 +154,20 @@ Save image
 ggsave(paste0(plot_dir, "nyc_cbp_pca1.png"), nyc_pc_plot1, height = 3, width = 6)
 ```
 
-For NYC, PC1 is capturing variation driven by population 24 (New Jersey), while pc2 is capturing variation driven by population 14 (Jerico).
+For NYC, PC1 is capturing variation driven by population 24 (New Jersey)
+
+Taking a look at PC3 as well.
+```{r}
+# rough plot
+nyc_pc_plot2 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC2, y=PC3, color = city)) +
+  geom_text_repel(data= subset(pc_info, city %in% c("New York", "Brooklyn", "Queens", "Flushing (Queens)")), aes(x=PC2, y=PC3, label = population), size = 3) +
+  theme_classic() +
+  scale_color_scico_d(palette = "managua") +
+  labs(x=paste0("PC2",percentage[2]), y= paste0("PC3",percentage[3]))
+
+nyc_pc_plot2
+```
 
 Is there spatial structure to PC2 or PC3 in NYC?
 ```{r}
@@ -248,9 +261,9 @@ ggsave(paste0(plot_dir,"eurasian_admix_k3_legend_bottom.png"), ea_k3[[1]], width
 
 ```{r, eval = F, echo=FALSE}
 # data for k = 2 on Eurasian group
-ea_k5 <- ancestry_cols(ea_p, "K5")
+ea_k4 <- ancestry_cols(ea_p, "K4")
 # make just the plot show up
-plot(ea_k5[[1]])
+plot(ea_k4[[1]])
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -284,19 +297,19 @@ ggsave(paste0(plot_dir, "eurasian_k3_map.png"),ea_k3_map, width = 13, height = 7
 
 ```{r}
 # assign sample to majority ancestry
-ea_k5_ancestry <- assign_ancestry(ea_p, "K5")
+ea_k4_ancestry <- assign_ancestry(ea_p, "K4")
 
 # join with location data
-ea_k5_ancestryL <- left_join(ea_k5_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
+ea_k4_ancestryL <- left_join(ea_k4_ancestry, vcf_dat[c("vcf_sample_name","sample_name",
                                                  "longitude","latitude","latlong_approx")])
 ```
 
 ```{r}
-ea_k5_map <- eurasia + geom_point(data=ea_k5_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
+ea_k4_map <- eurasia + geom_point(data=ea_k4_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
   scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17)) +
   geom_text_repel(data=subset(ea_k5_ancestryL, sample_name %in% c("RK32", "KYRG-3-14","QD325","wt-msu", "BEJ3", "FY5", "TACH1", "TACH-CHIN14", "HRB138", "HRB135", "HRB132", "QD325", "HD63")), aes(x=longitude, y=latitude, label = sample_name), max.overlaps = 50, size = 3)
 
-ea_k5_map
+ea_k4_map
 ```
 
 
@@ -403,7 +416,7 @@ With all of the above plots, the East Asian population always stands out. There 
 
 This is also good evidence that we can use some individuals from the East Asian group as a parental population in the local ancestry inference.
 
-Regardless of whether K=2,3, or 4, there are always 33 individuals that are in the East Asian cluster with no admixture present. I think it makes sense to use 25-30 individuals as the parental group in the LAI, and verify there's no inferred *C. rubella* ancestry with the rest.
+~~Regardless of whether K=2,3, or 4, there are always 33 individuals that are in the East Asian cluster with no admixture present. I think it makes sense to use 25-30 individuals as the parental group in the LAI, and verify there's no inferred *C. rubella* ancestry with the rest.~~
 
 # NYC and European with/out MENA 
 Seeing as the NYC individuals seems to clearly have a lot of shared variation with the Northern European group, it is worth seeing how NYC individuals partition into this group.
@@ -427,8 +440,8 @@ Plan:
 # select individuals whose ancestry is not the East Asian group: pop1 when k=3
 nEU <- ea_k3_ancestry[which(ea_k3_ancestryL$group == "pop1"),]
 
-# remove wt-msu because of the way PC3 in the whole CBP PCA draws 3 of them out
-nEU <- nEU[which(nEU$sample_name != "wt-msu"),]
+# remove samples drawn out by PC3 in the whole CBP PCA
+nEU <- nEU[which(!nEU$sample_name %in% c("wt-msu", "BEJ3", "FY5","TACH1")),]
 ```
 
 ```{r}
@@ -436,9 +449,21 @@ nEU <- nEU[which(nEU$sample_name != "wt-msu"),]
 write.table(nEU$vcf_sample_name, file = "~/Documents/PhD/Research/capsella_population_structure/vcf_neu.txt", quote = F, row.names = F, col.names = F, sep = "\t")
 ```
 
+
+I would also like to do a PCA with the East Asian individuals just to see how they compare. I will not have enough individuals for PLINK to do the PCA, so I will have to make an allele frequency file.
+```{r select EAsia group}
+# select individuals whose ancestry is not the East Asian group: pop1 when k=3
+easia <- ea_k3_ancestry[which(ea_k3_ancestryL$group == "pop2"),]
+```
+
+```{r}
+#save and write files
+write.table(easia$vcf_sample_name, file = "~/Documents/PhD/Research/capsella_population_structure/vcf_easia.txt", quote = F, row.names = F, col.names = F, sep = "\t")
+```
+
 # Northern European & NYC Plots
 
-Starting with PCA of NYC with N. European group (minus wt-msu).
+Starting with PCA of NYC with N. European group (minus Moscow and some China).
 
 ```{r nyc and n europe pca eigenstuff}
 # read in eigenvec and eigenval data
