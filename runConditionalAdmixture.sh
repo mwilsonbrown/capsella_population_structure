@@ -20,7 +20,7 @@
 ### VARIABLES
 VCF=/mnt/research/josephslab/Maya/CBP_CRCGCONP_maf_final.vcf.gz
 OUTDIR=/mnt/scratch/wils1582/admixture_out
-EA_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_eurasia.txt
+EU_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_eurasia.txt
 NYC_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_nyc.txt
 ALL_CBP=/mnt/home/wils1582/capsella_population_structure/all_cbp.txt
 
@@ -63,7 +63,7 @@ plink2 --vcf $VCF \
   --make-bed \
   --out eurasian_pruned_cbp \
 	--allow-extra-chr \
-	--keep $EA_SAMPLES \
+	--keep $EU_SAMPLES \
 	--set-all-var-ids @:# \
 	--pca
 # Prune New York/New Jersey CBP

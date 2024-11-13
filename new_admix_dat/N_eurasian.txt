@@ -1,0 +1,9 @@
+
+# Prune and PCA N. Eurasian CBP group
+plink2 --vcf $VCF \
+  --extract all_cbp_snps.prune.in \
+  --make-bed \
+  --out nyc_neu \
+	--allow-extra-chr \
+	--keep N_eurasian.txt \
+	--set-all-var-ids @:# \
