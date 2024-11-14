@@ -307,7 +307,7 @@ ea_k4_ancestryL <- left_join(ea_k4_ancestry, vcf_dat[c("vcf_sample_name","sample
 ```{r}
 ea_k4_map <- eurasia + geom_point(data=ea_k4_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
   scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17)) +
-  geom_text_repel(data=subset(ea_k5_ancestryL, sample_name %in% c("RK32", "KYRG-3-14","QD325","wt-msu", "BEJ3", "FY5", "TACH1", "TACH-CHIN14", "HRB138", "HRB135", "HRB132", "QD325", "HD63")), aes(x=longitude, y=latitude, label = sample_name), max.overlaps = 50, size = 3)
+  geom_text_repel(data=subset(ea_k4_ancestryL, sample_name %in% c("RK32", "KYRG-3-14","QD325","wt-msu", "BEJ3", "FY5", "TACH1", "TACH-CHIN14", "HRB138", "HRB135", "HRB132", "QD325", "HD63")), aes(x=longitude, y=latitude, label = sample_name), max.overlaps = 50, size = 3)
 
 ea_k4_map
 ```
@@ -315,6 +315,14 @@ ea_k4_map
 
 ```{r}
 ggsave(paste0(temp_plot, "eurasian_k5_map_labels.png"),ea_k5_map, width = 13, height = 7, units = "in")
+```
+
+```{r}
+ea_k4_map <- eurasia + geom_point(data=ea_k4_ancestryL, aes(x=longitude, y=latitude, color = group, shape = region), size = 7, alpha = 0.8) +
+  scale_shape_manual(values = c('C. Asia'=15, 'E. Asia'=18, 'N. Europe'=16, 'MENA/Mediterranean'=17)) +
+  geom_text_repel(data=subset(ea_k4_ancestryL, sample_name %in% c("AQ415","HJC419","JJN2","LJH9","YNHZ2","DL174","LJ5","LL761","NE2")), aes(x=longitude, y=latitude, label = sample_name), max.overlaps = 50, size = 3)
+
+ea_k4_map
 ```
 
 
@@ -384,7 +392,6 @@ Just a map colored by population for explaining the dataset
 ```{r}
 nyc_pops_map <- ny_map + geom_point(data=nyc_k3_ancestryL, aes(x=longitude, y=latitude, color = city), size = 3, alpha = 0.8) + scale_color_scico_d(palette = "managua")
 
-nyc_pops_map
 ```
 
 ```{r}
@@ -441,7 +448,7 @@ Plan:
 nEU <- ea_k3_ancestry[which(ea_k3_ancestryL$group == "pop1"),]
 
 # remove samples drawn out by PC3 in the whole CBP PCA
-nEU <- nEU[which(!nEU$sample_name %in% c("wt-msu", "BEJ3", "FY5","TACH1")),]
+nEU <- nEU[which(!nEU$sample_name %in% c("wt-msu", "BEJ3", "FY5","TACH1", "KYRG-3-14")),]
 ```
 
 ```{r}
@@ -467,9 +474,9 @@ Starting with PCA of NYC with N. European group (minus Moscow and some China).
 
 ```{r nyc and n europe pca eigenstuff}
 # read in eigenvec and eigenval data
-vec <- read.csv(paste0(admix_dir, "nyc_neu_pruned.eigenvec"), sep = "\t", header = T) #values on each PC
+vec <- read.csv(paste0(admix_dir, "nyc_neu.eigenvec"), sep = "\t", header = T) #values on each PC
 
-val <-  read.csv(paste0(admix_dir, "nyc_neu_pruned.eigenval"), sep = "\t", header = F) #PC variances explained
+val <-  read.csv(paste0(admix_dir, "nyc_neu.eigenval"), sep = "\t", header = F) #PC variances explained
 
 
 # percantage of variance explained by each PC
@@ -557,6 +564,79 @@ The N. European cluster without NYC included is only 22 samples. PLINK will perf
 I do not know if that will give me any additional useful information, however. Given how the PCA looks, it seems pretty clear that the NYC samples are most similar to Polish, Russian and Swedish populations, with the New Jersey population being the closest. 
 
 Also, Northern Chinese populations cluster together, while the sample from northeastern China clusters with the sample from Reykjavik.
+
+# East Asian Samples
+```{r e asia pca eigenstuff}
+# read in eigenvec and eigenval data
+vec <- read.csv(paste0(admix_dir, "easia_cbp.eigenvec"), sep = "\t", header = T) #values on each PC
+
+val <-  read.csv(paste0(admix_dir, "easia_cbp.eigenval"), sep = "\t", header = F) #PC variances explained
+
+
+# percantage of variance explained by each PC
+percentage <- round((val/(sum(val))*100), 2)
+percentage <- as.matrix(percentage)
+percentage <- paste0(names(percentage), " (", percentage, "%)")
+```
+
+```{r}
+# match individual IDs to informative data
+pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+```
+
+```{r}
+# rough plot
+easia_pc_plot1 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC2), size = 3, alpha = 0.75) +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
+
+easia_pc_plot1
+```
+I kind of want to color it by K=4 colors so
+```{r}
+pc_info_col <- left_join(pc_info, ea_k4_ancestryL)
+```
+```{r}
+# rough plot
+easia_pc_plot1 <- ggplot() +
+  geom_point(data=pc_info_col, aes(x=PC1, y=PC2, color = V2), size = 3, alpha = 0.75) +
+  geom_text_repel(data=subset(pc_info_col, sample_name %in% c("AQ415","HJC419","JJN2","LJH9","YNHZ2","DL174","LJ5","LL761","NE2")), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2) +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
+
+easia_pc_plot1
+```
+```{r}
+# rough plot
+easia_pc_plot1 <- ggplot() +
+  geom_point(data=pc_info_col, aes(x=PC1, y=PC2, color = V2, size = latitude), alpha = 0.75) +
+  geom_text_repel(data=subset(pc_info_col, sample_name %in% c("AQ415","HJC419","JJN2","LJH9","YNHZ2","DL174","LJ5","LL761","NE2")), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2) +
+  scale_color_gradient(high = "green", low = "blue") +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
+
+easia_pc_plot1
+```
+
+```{r}
+# rough plot
+easia_pc_plot2 <- ggplot() +
+  geom_point(data=pc_info_col, aes(x=PC1, y=PC3, color = V2), size = 3, alpha = 0.75) +
+  geom_text_repel(data=subset(pc_info_col, sample_name %in% c("AQ415","HJC419","JJN2","LJH9","YNHZ2","DL174","LJ5","LL761","NE2")), aes(x=PC1, y=PC3, label = sample_name), max.overlaps = 50, size = 2) +
+  scale_color_gradient(high = "green", low = "blue") +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
+
+easia_pc_plot2
+```
+```{r}
+# I think I am just adding the 3D plot for fun?
+library(plotly)
+
+plot_ly(data = pc_info_col, x = pc_info_col$PC1, y=pc_info_col$PC2, z=pc_info_col$PC3,type="scatter3d", mode="markers", color = pc_info_col$longitude)
+```
+
 
 # Write populations to file
 At this point, it makes sense to generate a key for generalized population structure to use in other analyses.
