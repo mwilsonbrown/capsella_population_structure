@@ -392,6 +392,7 @@ Just a map colored by population for explaining the dataset
 ```{r}
 nyc_pops_map <- ny_map + geom_point(data=nyc_k3_ancestryL, aes(x=longitude, y=latitude, color = city), size = 3, alpha = 0.8) + scale_color_scico_d(palette = "managua")
 
+nyc_pops_map
 ```
 
 ```{r}
