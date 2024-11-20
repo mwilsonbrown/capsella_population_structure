@@ -171,7 +171,7 @@ nyc_pc_plot2
 
 Is there spatial structure to PC2 or PC3 in NYC?
 ```{r}
-ny_map + geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC2), size = 3, alpha = 0.8)
+ny_map + geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC3), size = 3, alpha = 0.8)
 ```
 
 
@@ -559,6 +559,17 @@ ggsave(paste0(temp_plot, "nyc_neu_pca1Lat_zoom.png"), nyc_neu_pc1Lat_zoom, heigh
 
 Yeah, I might say so.
 
+```{r}
+# rough plot
+nyc_neu_pc_plot2 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC3, color = country), size = 3, alpha = 0.75) +
+  scale_color_discrete(labels = c("United States" = "NYC Metro")) +
+  geom_text_repel(data=subset(pc_info, country %in% c("China")), aes(x=PC1, y=PC3, label = sample_name), max.overlaps = 50, size = 2) +
+  theme_classic() +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
+
+nyc_neu_pc_plot2
+```
 The N. European cluster without NYC included is only 22 samples. PLINK will perform PCA with less than 50 samples without being given an allele frequency file because the sample number is too low. I think I should still be able to convert the pruned VCF to bed files and do the conditional ADMIXTURE analysis.
 
 I do not know if that will give me any additional useful information, however. Given how the PCA looks, it seems pretty clear that the NYC samples are most similar to Polish, Russian and Swedish populations, with the New Jersey population being the closest. 
