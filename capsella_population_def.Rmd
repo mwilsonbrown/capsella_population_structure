@@ -186,6 +186,35 @@ nyc_pc_plot2 <- ggplot() +
 
 nyc_pc_plot2
 ```
+Out of curiosity, how does the PCA look with NJ removed?
+```{r}
+# read in eigenvec and eigenval data
+vec <- read.csv(paste0(admix_dir, "nyc_noNJ.eigenvec"), sep = "\t", header = T) #values on each PC
+
+val <-  read.csv(paste0(admix_dir, "nyc_noNJ.eigenval"), sep = "\t", header = F) #PC variances explained
+
+
+# percantage of variance explained by each PC
+percentage <- round((val/(sum(val))*100), 2)
+percentage <- as.matrix(percentage)
+percentage <- paste0(names(percentage), " (", percentage, "%)")
+```
+
+```{r}
+# match individual IDs to informative data
+pc_info <- left_join(vec, vcf_dat, join_by("X.IID" == "vcf_sample_name"))
+```
+
+```{r}
+nyc_pc_plot1 <- ggplot() +
+  geom_point(data=pc_info, aes(x=PC1, y=PC2, color = city)) +
+  geom_text_repel(data= subset(pc_info, city %in% c("New York", "Brooklyn", "Queens", "Flushing (Queens)")), aes(x=PC1, y=PC2, label = population), size = 3) +
+  theme_classic() +
+  scale_color_scico_d(palette = "managua") +
+  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
+
+nyc_pc_plot1
+```
 
 
 #### ADMIXTURE conditioned on K
@@ -502,7 +531,6 @@ nyc_neu_pc_plot1 <- ggplot() +
 
 nyc_neu_pc_plot1
 ```
-PC1 seems to separate some of the Chinese plants from the rest, while PC2 clusters mainland Europe from others.
 
 Save image
 ```{r}
@@ -510,72 +538,63 @@ Save image
 ggsave(paste0(plot_dir, "nyc_neu_cbp_pca1.png"), nyc_neu_pc_plot1, height = 5, width = 8)
 ```
 
+
+What if I do the European human genomes thing and plot them by latitude and longitude
+```{r}
+nyc_neu_loc <- ggplot() +
+  geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC2), size = 3, alpha = 0.75) +
+  geom_text_repel(data=subset(pc_info, country %in% c("China")), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2) +
+  theme_classic()
+
+nyc_neu_loc
+```
+
 I would like to zoom in on that cluster
 ```{r}
-nyc_neu_pc_plot1_zoom <- ggplot() +
-  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC1, y=PC2, color = country),
-             size = 3, alpha = 0.75) +
-  scale_color_discrete(labels = c("United States" = "NYC Metro")) +
-  theme_classic() +
-  labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
-
-nyc_neu_pc_plot1_zoom
-```
-
-```{r}
-ggsave(paste0(plot_dir, "nyc_neu_pca1_zoom.png"), nyc_neu_pc_plot1_zoom, height = 5, width = 8)
-```
-Looks East to West (PC1) and North to South (PC2)?
-
-We can check that
-```{r}
-nyc_neu_pc1Long_zoom <- ggplot() +
-  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=longitude, y=PC1, color = country)) +
-  theme_bw() +
-  labs(x="longitude", y= paste0("PC1",percentage[1])) +
-  geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=longitude, y=PC1, label = sample_name), max.overlaps = 50, size = 2)
-
-nyc_neu_pc1Long_zoom
-```
-
-```{r}
-# save plot
-ggsave(paste0(temp_plot, "nyc_neu_pca1Long_zoom.png"), nyc_neu_pc1Long_zoom, height = 5, width = 8)
-```
-
-```{r}
-nyc_neu_pc1Lat_zoom <- ggplot() +
-  geom_point(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC2, y=latitude, color = country)) +
-  theme_bw() +
-  labs(x=paste0("PC2",percentage[2]), y= "latitude") +
-  geom_text_repel(data=subset(pc_info, country %in% c("United States", "Netherlands", "Poland", "Russia", "Sweden")), aes(x=PC2, y=latitude, label = sample_name), max.overlaps = 50, size = 2)
-
-nyc_neu_pc1Lat_zoom
-```
-
-```{r}
-# save plot
-ggsave(paste0(temp_plot, "nyc_neu_pca1Lat_zoom.png"), nyc_neu_pc1Lat_zoom, height = 5, width = 8)
-```
-
-Yeah, I might say so.
-
-```{r}
-# rough plot
 nyc_neu_pc_plot2 <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC3, color = country), size = 3, alpha = 0.75) +
   scale_color_discrete(labels = c("United States" = "NYC Metro")) +
-  geom_text_repel(data=subset(pc_info, country %in% c("China")), aes(x=PC1, y=PC3, label = sample_name), max.overlaps = 50, size = 2) +
+  geom_text_repel(data=subset(pc_info, country %in% c("China")), aes(x=PC1, y=PC2, label = sample_name), max.overlaps = 50, size = 2) +
   theme_classic() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
 
 nyc_neu_pc_plot2
 ```
+
+```{r}
+ggsave(paste0(plot_dir, "nyc_neu_pca2.png"), nyc_neu_pc_plot2, height = 5, width = 8)
+```
+Looks East to West (PC1) and North to South (PC2)?
+
+We can check that
+```{r}
+ny_map + geom_point(data=subset(pc_info, country == "United States"), aes(x=longitude, y=latitude, color = PC1), size = 3, alpha = 0.8)
+```
+
+
 The N. European cluster without NYC included is only 22 samples. PLINK will perform PCA with less than 50 samples without being given an allele frequency file because the sample number is too low. I think I should still be able to convert the pruned VCF to bed files and do the conditional ADMIXTURE analysis.
 
 I do not know if that will give me any additional useful information, however. Given how the PCA looks, it seems pretty clear that the NYC samples are most similar to Polish, Russian and Swedish populations, with the New Jersey population being the closest. 
 
 Also, Northern Chinese populations cluster together, while the sample from northeastern China clusters with the sample from Reykjavik.
+
+
+One thing that may or may not be interesting is looking at Fst in the (two-ish) Northern European groups and NYC
+```{r}
+# making another PIXY population file, leaving New Jersey out?
+pix <- pc_info %>% mutate(pop2 = case_when(state == "NY" ~ "NYC",
+                                    is.na(state) == T ~ "N_Europe"))
+
+pix <- pix[,c("X.IID", "sample_name", "pop2")]
+
+pixy_nyc_neu <- pix[which(is.na(pix$pop2) == F), c(1,3)]
+```
+
+
+write the data
+```{r}
+
+```
 
 # East Asian Samples
 ```{r e asia pca eigenstuff}
