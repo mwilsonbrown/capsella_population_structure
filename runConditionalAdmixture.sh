@@ -18,7 +18,7 @@
 # Calculates NYC admicture proportions conditional on Eurasian allele frequencies
 
 ### VARIABLES
-VCF=/mnt/research/josephslab/Maya/CBP_CRCGCONP_maf_final.vcf.gz
+VCF=/mnt/research/josephslab/Maya/capsella/vcf/filtered/CBP_CRCGCONP_maf_final.vcf.gz
 OUTDIR=/mnt/scratch/wils1582/admixture_out
 EU_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_eurasia.txt
 NYC_SAMPLES=/mnt/home/wils1582/capsella_population_structure/vcf_cbp_nyc.txt

@@ -62,7 +62,7 @@ pc_info <- pc_info %>% mutate(region = case_when(country %in% c("Switzerland","I
 pc_plot1 <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC2, color = region), size = 3,
              alpha = 0.7) +
-  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH-CHIN14")), aes(x=PC1, y=PC2, label = sample_name), size = 2) +
   scale_color_manual(values = region.cols) +
   theme_classic() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC2",percentage[2]))
@@ -100,7 +100,7 @@ Check out the other PCs
 # rough plot
 pc_plot2  <- ggplot() +
   geom_point(data=pc_info, aes(x=PC1, y=PC3, color = region), size = 3) +
-  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH_CHIN14")), aes(x=PC1, y=PC3, label = sample_name), size = 2) +
+  geom_text_repel(data=subset(pc_info, sample_name %in% c("wt-msu", "KYRG-3-14", "WAC5", "HRB132", "FY5", "BEJ3", "TACH1", "TACH-CHIN14")), aes(x=PC1, y=PC3, label = sample_name), size = 2) +
   scale_color_manual(values = region.cols) +
   theme_classic() +
   labs(x=paste0("PC1",percentage[1]), y= paste0("PC3",percentage[3]))
@@ -171,7 +171,7 @@ nyc_pc_plot2
 
 Is there spatial structure to PC2 or PC3 in NYC?
 ```{r}
-ny_map + geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC3), size = 3, alpha = 0.8)
+ny_map + geom_point(data=pc_info, aes(x=longitude, y=latitude, color = PC2), size = 3, alpha = 0.8)
 ```
 
 
@@ -449,7 +449,7 @@ Plan:
 nEU <- ea_k3_ancestry[which(ea_k3_ancestryL$group == "pop1"),]
 
 # remove samples drawn out by PC3 in the whole CBP PCA
-nEU <- nEU[which(!nEU$sample_name %in% c("wt-msu", "BEJ3", "FY5","TACH1", "KYRG-3-14")),]
+nEU <- nEU[which(!nEU$sample_name %in% c("wt-msu", "BEJ3", "FY5","TACH1", "KYRG-3-14", "TACH-CHIN14")),]
 ```
 
 ```{r}
